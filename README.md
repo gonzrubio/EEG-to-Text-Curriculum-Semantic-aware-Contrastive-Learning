@@ -10,8 +10,8 @@ conda activate eeg2text
 
 Adapted from ["Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification"](https://github.com/MikeWangWZHL/EEG-To-Text)
 
-# Download datasets
+### Download datasets
 modified instructions here
 
-# Preprocess datasets
+### Preprocess datasets
 modified instructions here
