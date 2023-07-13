@@ -8,7 +8,7 @@ conda activate eeg2text
 
 ## Download and preprocess ZuCo datasets
 
-Adapted from ("Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification")[https://github.com/MikeWangWZHL/EEG-To-Text]
+Adapted from ["Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification"](https://github.com/MikeWangWZHL/EEG-To-Text)
 
 # Download datasets
 modified instructions here
