@@ -27,7 +27,7 @@ Create the following directories in the repository's root directory:
 
 Unzip the downloaded files and move the `.mat` files to their respective directiories
 
-#### [ZuCo 2.0]([https://osf.io/q3zws/](https://osf.io/2urht/)
+#### [ZuCo 2.0](https://osf.io/q3zws/](https://osf.io/2urht/)
 - Download the file `task1-NR` from the [OSF Storage](https://osf.io/2urht/files/)
 - Create the directory `/dataset/ZuCo/task2-NR-2.0/`
 - Unzip the download and move the `.mat` files to their directiory above
