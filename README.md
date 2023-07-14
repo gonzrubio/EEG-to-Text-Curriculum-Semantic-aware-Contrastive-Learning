@@ -14,9 +14,9 @@ Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-s
 
 #### [ZuCo 1.0](https://osf.io/q3zws/)
 Download the files for the following tasks from the [OSF Storage](https://osf.io/q3zws/files/osfstorage):
--`task1-SR`
--`task2-SR`
--`task3-TSR`
+- `task1-SR`
+- `task2-SR`
+- `task3-TSR`
 
 *Note: The files are 63.7 GB and it takes about an hour to download.
 
@@ -27,7 +27,7 @@ Create the following directories in the repository's root directory:
 
 Unzip the downloaded files and move the `.mat` files to their respective directiories
 
-#### [ZuCo 2.0](https://osf.io/q3zws/](https://osf.io/2urht/)
+#### [ZuCo 2.0](https://osf.io/2urht/)
 - Download the file `task1-NR` from the [OSF Storage](https://osf.io/2urht/files/)
 - Create the directory `/dataset/ZuCo/task2-NR-2.0/`
 - Unzip the download and move the `.mat` files to their directiory above
