@@ -18,7 +18,7 @@ Download the files for the following tasks from [OSF Storage v1.0](https://osf.i
 - `task2-SR`
 - `task3-TSR`
 
-* Note: The files are 63.7 GB and it takes about an hour to download.
+> **_NOTE:_** The files are 63.7 GB, it can take some time to download.
 
 Create the following directories in the repository's root directory:
 - `/dataset/ZuCo/task1-SR/Matlab_files`
@@ -28,9 +28,10 @@ Create the following directories in the repository's root directory:
 Unzip the downloaded files and move the `.mat` files to their respective directories.
 
 #### [ZuCo 2.0](https://osf.io/2urht/)
-- Download the file `task1-NR` from [OSF Storage v2.0](https://osf.io/2urht/files/).
-- Create the directory `/dataset/ZuCo/task2-NR-2.0/`.
-- Unzip the downloaded file and move the `.mat` files to the directory above.
+Download the file `task1-NR` from [OSF Storage v2.0](https://osf.io/2urht/files/).
+> **_NOTE:_** The file is 62.2 GB.
+
+Create the directory `/dataset/ZuCo/task2-NR-2.0/Matlab_files`, unzip the downloaded file and move the `.mat` files to the created directory.
 
 ### Preprocess the Datasets
 modified instructions here
