@@ -1,4 +1,4 @@
-## Environment setup
+## Environment Setup
 
 Create and activate conda environment named ```eeg2text``` from the ```environment.yaml``` file.
 ```sh
@@ -6,11 +6,11 @@ conda env create -f environment.yaml
 conda activate eeg2text
 ```
 
-## Download and preprocess ZuCo datasets
+## Data
 
 Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
 
-### Download datasets
+### Download the ZuCo Datasets
 
 #### [ZuCo 1.0](https://osf.io/q3zws/)
 Download the files for the following tasks from the [OSF Storage v1.0](https://osf.io/q3zws/files/osfstorage):
@@ -32,5 +32,5 @@ Unzip the downloaded files and move the `.mat` files to their respective directi
 - Create the directory `/dataset/ZuCo/task2-NR-2.0/`.
 - Unzip the download and move the `.mat` files to their directiory above.
 
-### Preprocess datasets
+### Preprocess the Datasets
 modified instructions here
