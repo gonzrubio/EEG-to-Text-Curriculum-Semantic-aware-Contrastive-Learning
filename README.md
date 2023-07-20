@@ -1,6 +1,6 @@
-## Environment Setup
+## Environment
 
-Create and activate conda environment named ```eeg2text``` from the ```environment.yaml``` file.
+Create and activate the conda environment named ```eeg2text``` from the ```environment.yaml``` file.
 ```sh
 conda env create -f environment.yaml
 conda activate eeg2text
@@ -8,7 +8,7 @@ conda activate eeg2text
 
 ## Data
 
-Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
+The datasets are not included in this repository. Please follow the instructions bellow to download and preprocess the datasets. Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
 
 ### Download the ZuCo Datasets
 
