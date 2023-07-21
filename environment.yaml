@@ -2,10 +2,14 @@ name: eeg2text
 channels:
   - pytorch
   - nvidia
+  - anaconda
+  - conda-forge
 dependencies:
   - python=3.11.4
   - pytorch=2.0.1
   - torchvision=0.15.2
   - torchaudio=2.0.2
   - pytorch-cuda=11.8
-
+  - scipy=23.5.2
+  - h5py=3.7.0
+  - tqdm=4.65.0
