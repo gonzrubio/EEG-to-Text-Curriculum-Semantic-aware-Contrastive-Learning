@@ -15,7 +15,7 @@ The datasets are not included in this repository. Please follow the instructions
 #### [ZuCo 1.0](https://osf.io/q3zws/)
 Download the files for the following tasks from [OSF Storage v1.0](https://osf.io/q3zws/files/osfstorage):
 - `task1-SR`
-- `task2-SR`
+- `task2-NR`
 
 > **_NOTE:_** The files are 43.6 GB, it can take some time to download.
 
