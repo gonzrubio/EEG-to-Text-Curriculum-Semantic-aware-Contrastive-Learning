@@ -10,6 +10,8 @@ conda activate eeg2text
 
 The datasets are not included in this repository. Please follow the instructions below to download and preprocess the datasets. Following [Wang and Ji, 2022](https://arxiv.org/abs/2112.02690), only sentiment and normal reading tasks are used.
 
+The downloading instructions and preprocessing code have been adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
+
 ### Download the ZuCo Datasets
 
 #### [ZuCo 1.0](https://osf.io/q3zws/)
@@ -37,8 +39,6 @@ To preprocess the `.mat` files run the following command:
 ```
 bash src/prepare_dataset.sh
 ```
-For each task, all `.mat` files will be converted into a single `.pickle` file and stored in the following path: `dataset/ZuCo/<task_name>/pickle/<task_name>-dataset.pickle`.
-
-Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
-
 > **_NOTE:_** Please be patient, it can take a bit of time to preprocess the files.
+
+For each task, all `.mat` files will be converted into a single `.pickle` file and stored in the following path: `dataset/ZuCo/<task_name>/pickle/<task_name>-dataset.pickle`.
