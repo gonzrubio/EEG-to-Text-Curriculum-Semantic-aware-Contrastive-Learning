@@ -126,6 +126,9 @@ output_name = f'{task_name}-dataset.pickle'
 # with open(os.path.join(output_dir,'task1-SR-dataset.json'), 'w') as out:
 #     json.dump(dataset_dict,out,indent = 4)
 
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
 with open(os.path.join(output_dir,output_name), 'wb') as handle:
     pickle.dump(dataset_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     print('write to:', os.path.join(output_dir,output_name))
