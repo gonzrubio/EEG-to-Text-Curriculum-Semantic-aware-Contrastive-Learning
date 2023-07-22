@@ -8,7 +8,7 @@ conda activate eeg2text
 
 ## Data
 
-The datasets are not included in this repository. Please follow the instructions below to download and preprocess the datasets. Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
+The datasets are not included in this repository. Please follow the instructions below to download and preprocess the datasets. Following [Wang and Ji, 2022](https://arxiv.org/abs/2112.02690), only sentiment and normal reading tasks are used.
 
 ### Download the ZuCo Datasets
 
@@ -16,14 +16,12 @@ The datasets are not included in this repository. Please follow the instructions
 Download the files for the following tasks from [OSF Storage v1.0](https://osf.io/q3zws/files/osfstorage):
 - `task1-SR`
 - `task2-SR`
-- `task3-TSR`
 
-> **_NOTE:_** The files are 63.7 GB, it can take some time to download.
+> **_NOTE:_** The files are 43.6 GB, it can take some time to download.
 
 Create the following directories in the repository's root directory:
 - `dataset/ZuCo/task1-SR/Matlab_files`
 - `dataset/ZuCo/task2-NR/Matlab_files`
-- `dataset/ZuCo/task3-TSR/Matlab_files`
 
 Unzip the downloaded files and move the `.mat` files to their respective directories.
 
@@ -40,3 +38,7 @@ To preprocess the `.mat` files run the following command:
 bash src/prepare_dataset.sh
 ```
 For each task, all `.mat` files will be converted into a single `.pickle` file and stored in the following path: `dataset/ZuCo/<task_name>/pickle/<task_name>-dataset.pickle`.
+
+Adapted from [Open Vocabulary Electroencephalography-To-Text Decoding and Zero-shot Sentiment Classification](https://github.com/MikeWangWZHL/EEG-To-Text).
+
+> **_NOTE:_** Please be patient, it can take a bit of time to preprocess the files.
