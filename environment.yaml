@@ -13,3 +13,4 @@ dependencies:
   - scipy=23.5.2
   - h5py=3.7.0
   - tqdm=4.65.0
+  - transformers=4.28.1
