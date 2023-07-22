@@ -1,4 +1,9 @@
-"""ZuCo dataset for EEG-to-Text decoding."""
+"""ML-ready ZuCo dataset for EEG-to-Text decoding.
+
+Adapted from https://github.com/MikeWangWZHL/EEG-To-Text/blob/main/data.py
+"""
+
+import os
 
 import pickle
 
@@ -114,26 +119,44 @@ def get_input_sample(sent_obj, tokenizer, eeg_type = 'GD', bands = ['_t1','_t2',
 
 
 class ZuCo(Dataset):
+    # What does it do?
+    # A: convert pickle files for each task and all subjects into a...
 
-    def __init__(self, input_dataset_dicts, phase, tokenizer, subject = 'ALL', eeg_type = 'GD', bands = ['_t1','_t2','_a1','_a2','_b1','_b2','_g1','_g2'], setting = 'unique_sent', is_add_CLS_token = False):
+    def __init__(self,
+                 input_dataset_dicts,
+                 phase,
+                 tokenizer,
+                 subject='ALL',
+                 eeg_type='GD',
+                 bands='ALL',
+                 setting='unique_sent',
+                 is_add_CLS_token=False):
+
         self.inputs = []
         self.tokenizer = tokenizer
 
-        if not isinstance(input_dataset_dicts,list):
+        if not isinstance(input_dataset_dicts, list):
             input_dataset_dicts = [input_dataset_dicts]
-        print(f'[INFO]loading {len(input_dataset_dicts)} task datasets')
+
+        if bands == 'ALL':
+            bands = ['_t1', '_t2', '_a1', '_a2', '_b1', '_b2', '_g1', '_g2']
+
+        # TODO print all info from cfg params?
+        print(f'[INFO] loading {len(input_dataset_dicts)} task datasets')
+        print(f'[INFO] using bands {bands}')
+
         for input_dataset_dict in input_dataset_dicts:
             if subject == 'ALL':
                 subjects = list(input_dataset_dict.keys())
-                print('[INFO]using subjects: ', subjects)
+                print('[INFO] using subjects: ', subjects)
             else:
                 subjects = [subject]
-            
+
             total_num_sentence = len(input_dataset_dict[subjects[0]])
-            
+
             train_divider = int(0.8*total_num_sentence)
             dev_divider = train_divider + int(0.1*total_num_sentence)
-            
+
             print(f'train divider = {train_divider}')
             print(f'dev divider = {dev_divider}')
 
@@ -149,14 +172,14 @@ class ZuCo(Dataset):
                 elif phase == 'dev':
                     print('[INFO]initializing a dev set...')
                     for key in subjects:
-                        for i in range(train_divider,dev_divider):
+                        for i in range(train_divider, dev_divider):
                             input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
                             if input_sample is not None:
                                 self.inputs.append(input_sample)
                 elif phase == 'test':
                     print('[INFO]initializing a test set...')
                     for key in subjects:
-                        for i in range(dev_divider,total_num_sentence):
+                        for i in range(dev_divider, total_num_sentence):
                             input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
                             if input_sample is not None:
                                 self.inputs.append(input_sample)
@@ -188,7 +211,7 @@ class ZuCo(Dataset):
                                 self.inputs.append(input_sample)
             print('++ adding task to dataset, now we have:', len(self.inputs))
 
-        print('[INFO]input tensor size:', self.inputs[0]['input_embeddings'].size())
+        print('[INFO] input tensor size:', self.inputs[0]['input_embeddings'].size())
         print()
 
     def __len__(self):
@@ -208,45 +231,67 @@ class ZuCo(Dataset):
 
 
 def main():
+    """ML-ready ZuCo dataset sanity check."""
+    # load the pickle files for all tasks
+
+    dataset_path_task1 = os.path.join(
+        '../', 'dataset', 'ZuCo',
+        'task1-SR', 'pickle', 'task1-SR-dataset.pickle'
+        )
+
+    dataset_path_task2 = os.path.join(
+        '../', 'dataset', 'ZuCo',
+        'task2-NR', 'pickle', 'task2-NR-dataset.pickle'
+        )
+
+    dataset_path_task2_v2 = os.path.join(
+        '../', 'dataset', 'ZuCo',
+        'task2-NR-2.0', 'pickle', 'task2-NR-2.0-dataset.pickle'
+        )
 
     whole_dataset_dicts = []
+    for t in [dataset_path_task1, dataset_path_task2, dataset_path_task2_v2]:
+        with open(t, 'rb') as handle:
+            whole_dataset_dicts.append(pickle.load(handle))
 
-    dataset_path_task1 = '/shared/nas/data/m1/wangz3/SAO_project/SAO/dataset/ZuCo/task1-SR/pickle/task1-SR-dataset-with-tokens_6-25.pickle' 
-    with open(dataset_path_task1, 'rb') as handle:
-        whole_dataset_dicts.append(pickle.load(handle))
+    # check the number of subjects and unique sentences in each task
+    for idx, dataset_dict in enumerate(whole_dataset_dicts):
+        if idx == 0:
+            num_sent = 400
+            num_subj = 12
+        elif idx == 1:
+            num_sent = 300
+            num_subj = 12
+        else:
+            num_sent = 349
+            num_subj = 18
 
-    dataset_path_task2 = '/shared/nas/data/m1/wangz3/SAO_project/SAO/dataset/ZuCo/task2-NR/pickle/task2-NR-dataset-with-tokens_7-10.pickle' 
-    with open(dataset_path_task2, 'rb') as handle:
-        whole_dataset_dicts.append(pickle.load(handle))
+        assert len(dataset_dict) == num_subj
 
-    # dataset_path_task3 = '/shared/nas/data/m1/wangz3/SAO_project/SAO/dataset/ZuCo/task3-TSR/pickle/task3-TSR-dataset-with-tokens_7-10.pickle' 
-    # with open(dataset_path_task3, 'rb') as handle:
-    #     whole_dataset_dicts.append(pickle.load(handle))
+        for key in dataset_dict:
+            assert len(dataset_dict[key]) == num_sent
 
-    dataset_path_task2_v2 = '/shared/nas/data/m1/wangz3/SAO_project/SAO/dataset/ZuCo/task2-NR-2.0/pickle/task2-NR-2.0-dataset-with-tokens_7-15.pickle' 
-    with open(dataset_path_task2_v2, 'rb') as handle:
-        whole_dataset_dicts.append(pickle.load(handle))
-
-    print()
-    for key in whole_dataset_dicts[0]:
-        print(f'task2_v2, sentence num in {key}:',len(whole_dataset_dicts[0][key]))
-    print()
-
+    # data config
     tokenizer = BartTokenizer.from_pretrained('facebook/bart-large')
-    dataset_setting = 'unique_sent'
     subject_choice = 'ALL'
-    print(f'![Debug]using {subject_choice}')
     eeg_type_choice = 'GD'
-    print(f'[INFO]eeg type {eeg_type_choice}') 
-    bands_choice = ['_t1','_t2','_a1','_a2','_b1','_b2','_g1','_g2'] 
-    print(f'[INFO]using bands {bands_choice}')
-    train_set = ZuCo(whole_dataset_dicts, 'train', tokenizer, subject = subject_choice, eeg_type = eeg_type_choice, bands = bands_choice, setting = dataset_setting)
-    dev_set = ZuCo(whole_dataset_dicts, 'dev', tokenizer, subject = subject_choice, eeg_type = eeg_type_choice, bands = bands_choice, setting = dataset_setting)
-    test_set = ZuCo(whole_dataset_dicts, 'test', tokenizer, subject = subject_choice, eeg_type = eeg_type_choice, bands = bands_choice, setting = dataset_setting)
+    bands_choice = 'ALL'
+    dataset_setting = 'unique_sent'
 
-    print('trainset size:',len(train_set))
-    print('devset size:',len(dev_set))
-    print('testset size:',len(test_set))
+    # check split length and number of samples (table2)
+    # TODO check what it shoud be and make asserts
+    # split_dict = {'train', 'dev', 'test'} use to refactor?
+    for split in ['train', 'dev', 'test']:
+        dataset = ZuCo(
+            whole_dataset_dicts,
+            'train',
+            tokenizer,
+            subject=subject_choice,
+            eeg_type=eeg_type_choice,
+            bands=bands_choice,
+            setting=dataset_setting
+            )
+        print(f'{split}set size:', len(dataset))
 
 
 if __name__ == '__main__':
