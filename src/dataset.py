@@ -6,6 +6,7 @@ Adapted from https://github.com/MikeWangWZHL/EEG-To-Text/blob/main/data.py
 import os
 
 import pickle
+from tqdm import tqdm
 
 import numpy as np
 
@@ -14,23 +15,25 @@ from transformers import BartTokenizer
 from torch.utils.data import Dataset, DataLoader
 
 
-def normalize_1d(input_tensor):
-    # normalize a 1d tensor
-    mean = torch.mean(input_tensor)
-    std = torch.std(input_tensor)
-    input_tensor = (input_tensor - mean)/std
-    return input_tensor
+def get_input_sample(key, i, sent_obj, tokenizer, eeg_type, bands, max_len=56):
+    """From https://github.com/MikeWangWZHL/EEG-To-Text/blob/main/data.py."""
 
+    def normalize_1d(input_tensor):
+        mean = torch.mean(input_tensor)
+        std = torch.std(input_tensor)
+        input_tensor = (input_tensor - mean)/std
+        return input_tensor
 
-def get_input_sample(sent_obj, tokenizer, eeg_type = 'GD', bands = ['_t1','_t2','_a1','_a2','_b1','_b2','_g1','_g2'], max_len = 56, add_CLS_token = False):
-    
     def get_word_embedding_eeg_tensor(word_obj, eeg_type, bands):
         frequency_features = []
         for band in bands:
-            frequency_features.append(word_obj['word_level_EEG'][eeg_type][eeg_type+band])
+            frequency_features.append(
+                word_obj['word_level_EEG'][eeg_type][eeg_type+band]
+                )
         word_eeg_embedding = np.concatenate(frequency_features)
         if len(word_eeg_embedding) != 105*len(bands):
-            print(f'expect word eeg embedding dim to be {105*len(bands)}, but got {len(word_eeg_embedding)}, return None')
+            # print(f'expect word eeg embedding dim to be {105*len(bands)},
+            # but got {len(word_eeg_embedding)}, return None')
             return None
         # assert len(word_eeg_embedding) == 105*len(bands)
         return_tensor = torch.from_numpy(word_eeg_embedding)
@@ -47,80 +50,92 @@ def get_input_sample(sent_obj, tokenizer, eeg_type = 'GD', bands = ['_t1','_t2',
         return normalize_1d(return_tensor)
 
     if sent_obj is None:
-        # print(f'  - skip bad sentence')   
+        # print(f'  - skip bad sentence')
         return None
 
     input_sample = {}
+
     # get target label
     target_string = sent_obj['content']
-    target_tokenized = tokenizer(target_string, padding='max_length', max_length=max_len, truncation=True, return_tensors='pt', return_attention_mask = True)
-    
+    target_tokenized = tokenizer(
+        target_string, padding='max_length', max_length=max_len,
+        truncation=True, return_tensors='pt', return_attention_mask=True
+        )
     input_sample['target_ids'] = target_tokenized['input_ids'][0]
+
+    # get sentence level EEG features
+    sent_level_eeg_tensor = get_sent_eeg(sent_obj, bands)
+    if torch.isnan(sent_level_eeg_tensor).any():
+        # print('[NaN sent level eeg]: ', target_string)
+        return None
+    input_sample['sent_level_EEG'] = sent_level_eeg_tensor
+
+    # handle some wierd case
+    if 'emp11111ty' in target_string:
+        target_string = target_string.replace('emp11111ty', 'empty')
+    if 'film.1' in target_string:
+        target_string = target_string.replace('film.1', 'film.')
 
     # get input embeddings
     word_embeddings = []
-
-    """add CLS token embedding at the front"""
-    if add_CLS_token:
-        word_embeddings.append(torch.ones(105*len(bands)))
-
     for word in sent_obj['word']:
         # add each word's EEG embedding as Tensors
-        word_level_eeg_tensor = get_word_embedding_eeg_tensor(word, eeg_type, bands = bands)
-        # check none, for v2 dataset
-        if word_level_eeg_tensor is None:
+        word_level_eeg_tensor = get_word_embedding_eeg_tensor(
+            word, eeg_type, bands=bands
+            )
+        if word_level_eeg_tensor is None:   # check none, for v2 dataset
             return None
-        # check nan:
         if torch.isnan(word_level_eeg_tensor).any():
-            # print()
             # print('[NaN ERROR] problem sent:',sent_obj['content'])
             # print('[NaN ERROR] problem word:',word['content'])
             # print('[NaN ERROR] problem word feature:',word_level_eeg_tensor)
-            # print()
             return None
-            
-
         word_embeddings.append(word_level_eeg_tensor)
+
     # pad to max_len
     while len(word_embeddings) < max_len:
         word_embeddings.append(torch.zeros(105*len(bands)))
 
-    input_sample['input_embeddings'] = torch.stack(word_embeddings) # max_len * (105*num_bands)
+    # input_sample['input_embeddings'].shape = max_len * (105*num_bands)
+    input_sample['input_embeddings'] = torch.stack(word_embeddings)
+    len_sent_word = len(sent_obj['word'])  # len_sent_word <= max_len
 
-    # mask out padding tokens
-    input_sample['input_attn_mask'] = torch.zeros(max_len) # 0 is masked out
+    # mask out padding tokens, 0 is masked out, 1 is not masked
+    input_sample['input_attn_mask'] = torch.zeros(max_len)
+    input_sample['input_attn_mask'][:len_sent_word] = torch.ones(len_sent_word)
 
-    if add_CLS_token:
-        input_sample['input_attn_mask'][:len(sent_obj['word'])+1] = torch.ones(len(sent_obj['word'])+1) # 1 is not masked
-    else:
-        input_sample['input_attn_mask'][:len(sent_obj['word'])] = torch.ones(len(sent_obj['word'])) # 1 is not masked
-    
-
-    # mask out padding tokens reverted: handle different use case: this is for pytorch transformers
-    input_sample['input_attn_mask_invert'] = torch.ones(max_len) # 1 is masked out
-
-    if add_CLS_token:
-        input_sample['input_attn_mask_invert'][:len(sent_obj['word'])+1] = torch.zeros(len(sent_obj['word'])+1) # 0 is not masked
-    else:
-        input_sample['input_attn_mask_invert'][:len(sent_obj['word'])] = torch.zeros(len(sent_obj['word'])) # 0 is not masked
-
-    
+    # mask out padding tokens reverted: handle different use case: this is for
+    # pytorch transformers. 1 is masked out, 0 is not masked
+    input_sample['input_attn_mask_invert'] = torch.ones(max_len)
+    input_sample['input_attn_mask_invert'][:len_sent_word] = torch.zeros(
+        len_sent_word
+        )
 
     # mask out target padding for computing cross entropy loss
     input_sample['target_mask'] = target_tokenized['attention_mask'][0]
     input_sample['seq_len'] = len(sent_obj['word'])
-    
+
     # clean 0 length data
     if input_sample['seq_len'] == 0:
-        print('discard length zero instance: ', target_string)
+        # print('discard length zero instance: ', target_string)
         return None
 
     return input_sample
 
 
 class ZuCo(Dataset):
+    # dosctring:
     # What does it do?
     # A: convert pickle files for each task and all subjects into a...
+    # describe splits, constructor arguments, input tensor size: torch.Size([56, 840])
+    # take first 80% as trainset, 10% as dev and 10% as test
+    # TODO this info bellow should go in class dosctring explaining
+    # the difference between unique subject and unique sentence
+    # print('WARNING!!! only implemented for SR v1 dataset ')
+    # subject ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW']
+    # for train
+    # subject ['ZMG'] for dev
+    # subject ['ZPH'] for test
 
     def __init__(self,
                  input_dataset_dicts,
@@ -129,110 +144,104 @@ class ZuCo(Dataset):
                  subject='ALL',
                  eeg_type='GD',
                  bands='ALL',
-                 setting='unique_sent',
-                 is_add_CLS_token=False):
-
-        self.inputs = []
-        self.tokenizer = tokenizer
+                 setting='unique_sent'):
 
         if not isinstance(input_dataset_dicts, list):
             input_dataset_dicts = [input_dataset_dicts]
 
-        if bands == 'ALL':
-            bands = ['_t1', '_t2', '_a1', '_a2', '_b1', '_b2', '_g1', '_g2']
+        self.inputs = []
+        self.tokenizer = tokenizer
+        self.subject = subject
+        self.setting = setting
+        self.eeg_type = eeg_type
+        self.train = 0.8
+        self.dev = 0.1
+        self.bands = ['_t1', '_t2', '_a1', '_a2', '_b1', '_b2', '_g1', '_g2'] \
+            if bands == 'ALL' else bands
 
-        # TODO print all info from cfg params?
-        print(f'[INFO] loading {len(input_dataset_dicts)} task datasets')
-        print(f'[INFO] using bands {bands}')
-
+        # go through all task datasets
         for input_dataset_dict in input_dataset_dicts:
-            if subject == 'ALL':
-                subjects = list(input_dataset_dict.keys())
-                print('[INFO] using subjects: ', subjects)
-            else:
-                subjects = [subject]
 
+            # get the subject(s) key/name for this task
+            subjects = list(input_dataset_dict.keys()) \
+                if subject == 'ALL' else [subject]
+
+            # number of sentences per subject in this task
             total_num_sentence = len(input_dataset_dict[subjects[0]])
 
-            train_divider = int(0.8*total_num_sentence)
-            dev_divider = train_divider + int(0.1*total_num_sentence)
-
-            print(f'train divider = {train_divider}')
-            print(f'dev divider = {dev_divider}')
-
+            # create dataset grouped by unique sentence or subject
             if setting == 'unique_sent':
-                # take first 80% as trainset, 10% as dev and 10% as test
-                if phase == 'train':
-                    print('[INFO]initializing a train set...')
-                    for key in subjects:
-                        for i in range(train_divider):
-                            input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
-                            if input_sample is not None:
-                                self.inputs.append(input_sample)
-                elif phase == 'dev':
-                    print('[INFO]initializing a dev set...')
-                    for key in subjects:
-                        for i in range(train_divider, dev_divider):
-                            input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
-                            if input_sample is not None:
-                                self.inputs.append(input_sample)
-                elif phase == 'test':
-                    print('[INFO]initializing a test set...')
-                    for key in subjects:
-                        for i in range(dev_divider, total_num_sentence):
-                            input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
-                            if input_sample is not None:
-                                self.inputs.append(input_sample)
+                self.unique_sent(
+                    phase, subjects, input_dataset_dict, total_num_sentence
+                    )
             elif setting == 'unique_subj':
-                print('WARNING!!! only implemented for SR v1 dataset ')
-                # subject ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW'] for train
-                # subject ['ZMG'] for dev
-                # subject ['ZPH'] for test
-                if phase == 'train':
-                    print(f'[INFO]initializing a train set using {setting} setting...')
-                    for i in range(total_num_sentence):
-                        for key in ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH','ZKW']:
-                            input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
-                            if input_sample is not None:
-                                self.inputs.append(input_sample)
-                if phase == 'dev':
-                    print(f'[INFO]initializing a dev set using {setting} setting...')
-                    for i in range(total_num_sentence):
-                        for key in ['ZMG']:
-                            input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
-                            if input_sample is not None:
-                                self.inputs.append(input_sample)
-                if phase == 'test':
-                    print(f'[INFO]initializing a test set using {setting} setting...')
-                    for i in range(total_num_sentence):
-                        for key in ['ZPH']:
-                            input_sample = get_input_sample(input_dataset_dict[key][i],self.tokenizer,eeg_type,bands = bands, add_CLS_token = is_add_CLS_token)
-                            if input_sample is not None:
-                                self.inputs.append(input_sample)
-            print('++ adding task to dataset, now we have:', len(self.inputs))
+                self.unique_subj(phase, input_dataset_dict, total_num_sentence)
 
-        print('[INFO] input tensor size:', self.inputs[0]['input_embeddings'].size())
-        print()
+    def unique_sent(
+            self, phase, subjects, input_dataset_dict, total_num_sentence
+            ):
+        # indices separating the sentences into train/dev/test splits
+        train_divider = int(self.train * total_num_sentence)
+        dev_divider = train_divider + int(self.dev * total_num_sentence)
 
-    def __len__(self):
-        return len(self.inputs)
+        if phase == 'train':
+            range_iter = range(train_divider)
+        elif phase == 'dev':
+            range_iter = range(train_divider, dev_divider)
+        elif phase == 'test':
+            range_iter = range(dev_divider, total_num_sentence)
+
+        for key in subjects:
+            for i in range_iter:
+                self.append_input_sample(input_dataset_dict, key, i)
+
+    def unique_subj(
+            self, phase, input_dataset_dict, total_num_sentence
+            ):
+        # sort the subjetcs into train/dev/test splits
+        if phase == 'train':
+            subj_iter = [
+                'ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW'
+                ]
+        elif phase == 'dev':
+            subj_iter = ['ZMG']
+        elif phase == 'test':
+            subj_iter = ['ZPH']
+
+        for i in range(total_num_sentence):
+            for key in subj_iter:
+                self.append_input_sample(input_dataset_dict, key, i)
+
+    def append_input_sample(self, input_dataset_dict, key, i):
+        input_sample = get_input_sample(
+            key, i,
+            input_dataset_dict[key][i],
+            self.tokenizer,
+            self.eeg_type,
+            self.bands
+            )
+        if input_sample is not None:
+            self.inputs.append(input_sample)
 
     def __getitem__(self, idx):
         input_sample = self.inputs[idx]
         return (
-            input_sample['input_embeddings'], 
+            input_sample['input_embeddings'],
             input_sample['seq_len'],
-            input_sample['input_attn_mask'], 
+            input_sample['input_attn_mask'],
             input_sample['input_attn_mask_invert'],
-            input_sample['target_ids'], 
-            input_sample['target_mask'], 
+            input_sample['target_ids'],
+            input_sample['target_mask']
         )
-        # keys: input_embeddings, input_attn_mask, input_attn_mask_invert, target_ids, target_mask, 
+
+    def __len__(self):
+        return len(self.inputs)
 
 
 def main():
     """ML-ready ZuCo dataset sanity check."""
     # load the pickle files for all tasks
+    whole_dataset_dicts = []
 
     dataset_path_task1 = os.path.join(
         '../', 'dataset', 'ZuCo',
@@ -275,16 +284,14 @@ def main():
     tokenizer = BartTokenizer.from_pretrained('facebook/bart-large')
     subject_choice = 'ALL'
     eeg_type_choice = 'GD'
-    bands_choice = 'ALL'
+    bands_choice = ['_t1', '_t2', '_a1', '_a2', '_b1', '_b2', '_g1', '_g2']
     dataset_setting = 'unique_sent'
 
-    # check split length and number of samples (table2)
-    # TODO check what it shoud be and make asserts
-    # split_dict = {'train', 'dev', 'test'} use to refactor?
-    for split in ['train', 'dev', 'test']:
+    # check split size
+    for split in tqdm(['train', 'dev', 'test']):
         dataset = ZuCo(
             whole_dataset_dicts,
-            'train',
+            split,
             tokenizer,
             subject=subject_choice,
             eeg_type=eeg_type_choice,
