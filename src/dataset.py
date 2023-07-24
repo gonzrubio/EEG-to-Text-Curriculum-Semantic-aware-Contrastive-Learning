@@ -12,7 +12,7 @@ import numpy as np
 
 import torch
 from transformers import BartTokenizer
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 
 def get_input_sample(key, i, sent_obj, tokenizer, eeg_type, bands, max_len=56):
@@ -177,6 +177,20 @@ class ZuCo(Dataset):
             elif setting == 'unique_subj':
                 self.unique_subj(phase, input_dataset_dict, total_num_sentence)
 
+    def __getitem__(self, idx):
+        input_sample = self.inputs[idx]
+        return (
+            input_sample['input_embeddings'],
+            input_sample['seq_len'],
+            input_sample['input_attn_mask'],
+            input_sample['input_attn_mask_invert'],
+            input_sample['target_ids'],
+            input_sample['target_mask']
+        )
+
+    def __len__(self):
+        return len(self.inputs)
+
     def unique_sent(
             self, phase, subjects, input_dataset_dict, total_num_sentence
             ):
@@ -222,20 +236,6 @@ class ZuCo(Dataset):
             )
         if input_sample is not None:
             self.inputs.append(input_sample)
-
-    def __getitem__(self, idx):
-        input_sample = self.inputs[idx]
-        return (
-            input_sample['input_embeddings'],
-            input_sample['seq_len'],
-            input_sample['input_attn_mask'],
-            input_sample['input_attn_mask_invert'],
-            input_sample['target_ids'],
-            input_sample['target_mask']
-        )
-
-    def __len__(self):
-        return len(self.inputs)
 
 
 def main():
