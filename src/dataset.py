@@ -14,18 +14,45 @@ from data.get_input_sample import get_input_sample
 
 
 class ZuCo(Dataset):
-    # dosctring:
-    # What does it do? ie explain constructor and getter method
-    # A: convert pickle files for each task and all subjects into a...
-    # describe splits, constructor arguments, input tensor size: torch.Size([56, 840])
-    # take first 80% as trainset, 10% as dev and 10% as test
-    # TODO this info bellow should go in class dosctring explaining
-    # the difference between unique subject and unique sentence
-    # print('WARNING!!! only implemented for SR v1 dataset ')
-    # subject ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW']
-    # for train
-    # subject ['ZMG'] for dev
-    # subject ['ZPH'] for test
+    """A custom dataset class for the ZuCo dataset.
+
+    Split for a given task(s), subject(s) and unique subject/sentence setting.
+
+    Constructor Arguments:
+        - input_dataset_dicts (list or dict): The pickle data for each task.
+        - phase (str): The dataset split. One of 'train', 'dev', or 'test'.
+        - tokenizer (object): The tokenizer used to convert text to tokens
+        - subject (str, optional): The subject(s) to use. Default is 'ALL'.
+        - eeg_type (str, optional): The type of eye-tracking features.
+        - bands (str or list, optional): The frequency bands. Default is 'ALL'.
+        - setting (str, optional): 'unique_sent' or 'unique_subj'. Default is 'unique_sent'.
+
+    Note:
+    ----
+        The dataset is split into three parts: 80% for training, 10% for
+        development (dev), and 10% for testing based on the 'phase' argument.
+
+        The 'unique_sent' setting creates the dataset by grouping sentences
+        based on their uniqueness, while the 'unique_subj' setting groups the
+        dataset based on unique subjects.
+
+        WARNING!!! The 'unique_sent' setting is specific to the SR v1 dataset.
+
+        For the 'unique_sent' setting, the following subjects are used:
+        - ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW'] for training
+        - ['ZMG'] for dev
+        - ['ZPH'] for test
+
+    Getter Method:
+        __getitem__(self, idx):
+            - input_sample['input_embeddings']: Word-level EEG embeddings of the sentence.
+            - input_sample['seq_len']: Number of non-padding tokens in the sentence.
+            - input_sample['input_attn_mask']: Attention mask for input embeddings.
+            - input_sample['input_attn_mask_invert']: Inverted attention mask.
+            - input_sample['target_ids']: Tokenized and encoded target sentence.
+            - input_sample['target_mask']: Attention mask for target sentence.
+
+    """
 
     def __init__(self,
                  input_dataset_dicts,
