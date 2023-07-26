@@ -1,8 +1,6 @@
-"""Get a sample for a given subject and sentence number.
+"""Generate a tokenized sentence and EEG features for decoding.
 
 Adapted from https://github.com/MikeWangWZHL/EEG-To-Text/blob/main/data.py
-
-TODO details here
 """
 
 import numpy as np
@@ -11,7 +9,28 @@ import torch
 
 
 def get_input_sample(sent_obj, tokenizer, eeg_type, bands, max_len=56):
+    """Get a sample for a given sentence and subject EEG data.
 
+    Args
+    -------
+        sent_obj (dict): A sentence object with EEG data.
+        tokenizer: An instance of the tokenizer used to convert text to tokens.
+        eeg_type (str): The type of eye-tracking features.
+        bands (list): The EEG frequency bands to use.
+        max_len (int, optional): Maximum length of the input. Defaults to 56.
+
+    Returns
+    -------
+        input_sample (dict or None):
+            - 'target_ids': Tokenized and encoded target sentence.
+            - 'input_embeddings': Word-level EEG embeddings of the sentence.
+            - 'input_attn_mask': Attention mask for input embeddings.
+            - 'input_attn_mask_invert': Inverted attention mask.
+            - 'target_mask': Attention mask for target sentence.
+            - 'seq_len': Number of non-padding tokens in the sentence.
+
+            Returns None if the input sentence is invalid or contains NaNs.
+    """
     def normalize_1d(input_tensor):
         mean = torch.mean(input_tensor)
         std = torch.std(input_tensor)
