@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 # chatgpt
@@ -54,38 +55,91 @@ import torch.nn as nn
 
 
 class BrainTranslator(nn.Module):
-    def __init__(self, pretrained_layers, in_feature = 840, decoder_embedding_size = 1024, additional_encoder_nhead=8, additional_encoder_dim_feedforward = 2048):
+    """BrainTranslator model for EEG-to-Text decoding.
+
+    Args:
+    ----
+        pretrained_seq2seq (nn.Module): Pretrained sequence-to-sequence model.
+        d_model (int): Input and output embeddings dimension (default: 840).
+        nhead (int): Number of heads in multiheadattention (default: 8).
+        dim_decoder (int): Decoder's embedding layer dimension (default: 1024).
+        dim_feedforward (int): Fully connected net dimension (default: 2048).
+        num_layers (int): Number of transformer encoder layers (default: 6).
+
+    """
+
+    def __init__(self,
+                 pretrained_seq2seq,
+                 d_model=840,
+                 nhead=8,
+                 dim_feedforward=2048,
+                 dim_decoder=1024,
+                 num_layers=6):
+
         super(BrainTranslator, self).__init__()
 
-        self.pretrained = pretrained_layers
-        # additional transformer encoder, following BART paper about 
-        self.additional_encoder_layer = nn.TransformerEncoderLayer(d_model=in_feature, nhead=additional_encoder_nhead,  dim_feedforward = additional_encoder_dim_feedforward, batch_first=True)
-        self.additional_encoder = nn.TransformerEncoder(self.additional_encoder_layer, num_layers=6)
+        self.pre_encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            batch_first=True
+            )
 
-        # print('[INFO]adding positional embedding')
-        # self.positional_embedding = PositionalEncoding(in_feature)
+        self.pre_encoder = nn.TransformerEncoder(
+            self.pre_encoder_layer,
+            num_layers=num_layers
+            )
 
-        self.fc1 = nn.Linear(in_feature, decoder_embedding_size)
+        self.fc = nn.Linear(
+            in_features=d_model, out_features=dim_decoder, bias=True
+            )
 
-    def forward(self, input_embeddings_batch, input_masks_batch, input_masks_invert, target_ids_batch_converted):
-        """input_embeddings_batch: batch_size*Seq_len*840"""
-        """input_mask: 1 is not masked, 0 is masked"""
-        """input_masks_invert: 1 is masked, 0 is not masked"""
+        self.seq2seq = pretrained_seq2seq
 
-        # input_embeddings_batch = self.positional_embedding(input_embeddings_batch) 
+    def forward(self, src, input_masks_batch, input_masks_invert, labels):
+        """
+        Note:
+        ----
+            - `input_masks_batch` and `input_masks_invert` are used for masking during attention computations.
+            - The `pretrained_seq2seq` module should be compatible with the desired sequence-to-sequence task.
 
-        # use src_key_padding_masks
-        encoded_embedding = self.additional_encoder(input_embeddings_batch, src_key_padding_mask = input_masks_invert) 
+        input_embeddings_batch: batch_size*Seq_len*840
+        input_mask: 1 is not masked, 0 is masked
+        input_masks_invert: 1 is masked, 0 is not masked
 
-        # encoded_embedding = self.additional_encoder(input_embeddings_batch) 
-        encoded_embedding = F.relu(self.fc1(encoded_embedding))
-        out = self.pretrained(inputs_embeds = encoded_embedding, attention_mask = input_masks_batch, return_dict = True, labels = target_ids_batch_converted)                    
+        Parameters
+        ----------
+        src : TYPE
+            DESCRIPTION.
+        input_masks_batch : TYPE
+            DESCRIPTION.
+        input_masks_invert : TYPE
+            DESCRIPTION.
+        target_ids_batch_converted : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        out : TYPE
+            DESCRIPTION.
+
+        """
+        out = self.pre_encoder(src, src_key_padding_mask=input_masks_invert)
+
+        out = F.relu(self.fc(out))
+
+        out = self.seq2seq(
+            inputs_embeds=out,
+            attention_mask=input_masks_batch,
+            return_dict=True,
+            labels=labels
+            )
 
         return out
 
-def main():
-    # Example usage
 
+def main():
+    """BrainBART example usage."""
     # Define model parameters
     input_dim = 128
     hidden_dim = 256
