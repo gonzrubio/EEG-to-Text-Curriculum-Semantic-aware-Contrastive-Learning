@@ -43,14 +43,13 @@ class ZuCo(Dataset):
         - ['ZMG'] for dev
         - ['ZPH'] for test
 
-    Getter Method:
-        __getitem__(self, idx):
-            - input_sample['input_embeddings']: Word-level EEG embeddings of the sentence.
-            - input_sample['seq_len']: Number of non-padding tokens in the sentence.
-            - input_sample['input_attn_mask']: Attention mask for input embeddings.
-            - input_sample['input_attn_mask_invert']: Inverted attention mask.
-            - input_sample['target_ids']: Tokenized and encoded target sentence.
-            - input_sample['target_mask']: Attention mask for target sentence.
+    The getter method returns a tuple of:
+            - Word-level EEG embeddings of the sentence.
+            - Number of non-padding tokens in the sentence.
+            - Attention mask for input embeddings.
+            - Inverted attention mask.
+            - Tokenized and encoded target sentence.
+            - Attention mask for target sentence.
 
     """
 
