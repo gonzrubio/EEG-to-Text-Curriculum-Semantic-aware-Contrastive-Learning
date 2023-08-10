@@ -36,9 +36,9 @@ class ZuCo(Dataset):
         based on their uniqueness, while the 'unique_subj' setting groups the
         dataset based on unique subjects.
 
-        WARNING!!! The 'unique_sent' setting is specific to the SR v1 dataset.
+        WARNING!!! The 'unique_subj' setting is specific to the SR v1 dataset.
 
-        For the 'unique_sent' setting, the following subjects are used:
+        For the 'unique_subj' setting, the following subjects are used:
         - ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW'] for training
         - ['ZMG'] for dev
         - ['ZPH'] for test
