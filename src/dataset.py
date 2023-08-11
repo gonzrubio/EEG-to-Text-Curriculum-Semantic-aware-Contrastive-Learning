@@ -7,6 +7,7 @@ import os
 import pickle
 from tqdm import tqdm
 
+import torch
 from transformers import BartTokenizer
 from torch.utils.data import Dataset
 
@@ -150,6 +151,7 @@ class ZuCo(Dataset):
             self.bands
             )
         if input_sample is not None:
+            input_sample['input_embeddings'] = input_sample['input_embeddings'].to(torch.float)
             self.inputs.append(input_sample)
 
 
