@@ -100,18 +100,18 @@ def main():
         nhead=nhead,
         dim_pre_encoder=dim_pre_encoder,
         dim_s2s=dim_s2s
-    )
+    ).to(device)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Number of trainable parameters: {num_params:,}")
 
     # dummy sample for testing
-    batch_size = 2
+    batch_size = 64
     seq_len = 56
-    src = torch.rand(batch_size, seq_len, input_dim)
-    input_masks_batch = torch.ones(batch_size, seq_len, dtype=torch.float)
-    input_masks_invert = torch.zeros(batch_size, seq_len, dtype=torch.float)
-    labels = torch.ones(batch_size, seq_len, dtype=torch.long)
+    src = torch.rand(batch_size, seq_len, input_dim).to(device)
+    input_masks_batch = torch.ones(batch_size, seq_len, dtype=torch.float).to(device)
+    input_masks_invert = torch.zeros(batch_size, seq_len, dtype=torch.float).to(device)
+    labels = torch.ones(batch_size, seq_len, dtype=torch.long).to(device)
 
     # forward pass and check output shape
     out = model(src, input_masks_batch, input_masks_invert, labels)
