@@ -6,14 +6,14 @@ import numpy as np
 
 
 class CSCL:
-    """Contrastive Self-Supervised Curriculum Learning (CSCL) Class.
+    """Contrastive Self-Supervised Curriculum Learning (CSCL).
 
     This class implements a Contrastive Self-Supervised Curriculum Learning framework.
     Given EEG signals, sentences, and curriculum levels, it generates contrastive triplets
     to guide the learning process.
 
     Args:
-    -----
+    ----
         sentences (list): A set of all sentences S.
         fs (dict): A mapping from sentence Si to a set of EEG signals ESi.
         fp (dict): A mapping from subject pi to a set of EEG signals Epi.
