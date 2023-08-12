@@ -7,6 +7,7 @@ import os
 import pickle
 from tqdm import tqdm
 
+import torch
 from transformers import BartTokenizer
 from torch.utils.data import Dataset
 
@@ -36,21 +37,20 @@ class ZuCo(Dataset):
         based on their uniqueness, while the 'unique_subj' setting groups the
         dataset based on unique subjects.
 
-        WARNING!!! The 'unique_sent' setting is specific to the SR v1 dataset.
+        WARNING!!! The 'unique_subj' setting is specific to the SR v1 dataset.
 
-        For the 'unique_sent' setting, the following subjects are used:
+        For the 'unique_subj' setting, the following subjects are used:
         - ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH', 'ZKW'] for training
         - ['ZMG'] for dev
         - ['ZPH'] for test
 
-    Getter Method:
-        __getitem__(self, idx):
-            - input_sample['input_embeddings']: Word-level EEG embeddings of the sentence.
-            - input_sample['seq_len']: Number of non-padding tokens in the sentence.
-            - input_sample['input_attn_mask']: Attention mask for input embeddings.
-            - input_sample['input_attn_mask_invert']: Inverted attention mask.
-            - input_sample['target_ids']: Tokenized and encoded target sentence.
-            - input_sample['target_mask']: Attention mask for target sentence.
+    The getter method returns a tuple of:
+            - Word-level EEG embeddings of the sentence.
+            - Number of non-padding tokens in the sentence.
+            - Attention mask for input embeddings.
+            - Inverted attention mask.
+            - Tokenized and encoded target sentence.
+            - Attention mask for target sentence.
 
     """
 
@@ -151,6 +151,7 @@ class ZuCo(Dataset):
             self.bands
             )
         if input_sample is not None:
+            input_sample['input_embeddings'] = input_sample['input_embeddings'].to(torch.float)
             self.inputs.append(input_sample)
 
 
