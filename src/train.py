@@ -76,6 +76,9 @@ def main():
     ).to(device)
 
     # train pre-encoder with CSCL
+    # return a batch of samples from loader
+    # for each sample in the batch construct a triplet
+    # compute  on batch (equation 2)
 
     # verify loss @ init -log(1/n_classes)
 
