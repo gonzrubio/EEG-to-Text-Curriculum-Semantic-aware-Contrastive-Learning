@@ -152,6 +152,11 @@ class ZuCo(Dataset):
             )
         if input_sample is not None:
             input_sample['input_embeddings'] = input_sample['input_embeddings'].to(torch.float)
+            input_sample['subject'] = key
+            input_dataset_dict[key][i]['word_tokens_all']
+            input_sample['sentence'] = " ".join(
+                input_dataset_dict[key][i]['word_tokens_all']
+                )
             self.inputs.append(input_sample)
 
 
