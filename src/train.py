@@ -38,7 +38,6 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # set up the dataloader
-    # TODO refactor in utils?
     whole_dataset_dicts = []
 
     dataset_path_task1 = os.path.join(
@@ -52,7 +51,6 @@ def main():
             whole_dataset_dicts.append(pickle.load(handle))
 
     # data config
-    # TODO refactor in utils?
     train_set = ZuCo(
         whole_dataset_dicts,
         'train',
@@ -68,7 +66,6 @@ def main():
         )
 
     # model
-    # TODO refactor in utils?
     model = BrainTranslator(
         BartForConditionalGeneration.from_pretrained('facebook/bart-large'),
         input_dim=cfg['input_dim'],
@@ -78,13 +75,13 @@ def main():
         dim_s2s=cfg['dim_s2s']
     ).to(device)
 
-    # train pre-encoder with CSCL (verify and document)
+    # train pre-encoder with CSCL
 
     # verify loss @ init -log(1/n_classes)
 
     # input-indepent baseline.
 
-    # overfit one batch of two exaples then 10
+    # overfit small(est) batch
 
 
 if __name__ == "__main__":
