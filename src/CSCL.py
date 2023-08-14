@@ -1,8 +1,16 @@
 """Curriculum Semantic-aware Contrastive Learning."""
 
+import os
+import pickle
 # import random
-from sklearn.metrics.pairwise import cosine_similarity
+
 import numpy as np
+
+# from sklearn.metrics.pairwise import cosine_similarity
+from torch.utils.data import DataLoader
+from transformers import BartTokenizer
+
+from dataset import ZuCo
 
 
 class CSCL:
@@ -55,7 +63,7 @@ class CSCL:
         """
         sims = []
         for Ej in E:
-            simj = cosine_similarity(E, Ej)
+            # simj = cosine_similarity(E, Ej)
             sims.append(simj)
         indices = np.argsort(sims, order=order)
         return E[indices]
@@ -85,18 +93,42 @@ class CSCL:
 
 
 if __name__ == "__main__":
-    sentences = ['I like cats', 'The sky is blue', 'Play the piano']
-    fs = {'I like cats': np.array([[0.2, 0.4], [0.3, 0.1]]),
-          'The sky is blue': np.array([[0.5, 0.7], [0.1, 0.9]]),
-          'Play the piano': np.array([[0.8, 0.6], [0.4, 0.2]])}
-    fp = {'subject1': np.array([[0.4, 0.2], [0.6, 0.3]]),
-          'subject2': np.array([[0.7, 0.5], [0.9, 0.1]])}
 
-    c_scl = CSCL(sentences, fs, fp)
-    Ei = np.array([[0.3, 0.2], [0.5, 0.7]])
-    pi = 'subject1'
-    Si = 'I like cats'
-    curr_level = 1
+    whole_dataset_dicts = []
 
-    result = c_scl.C_SCL(Ei, pi, Si, curr_level)
-    print(f'Contrastive triple: {result}')
+    dataset_path_task1 = os.path.join(
+        '../', 'dataset', 'ZuCo',
+        'task1-SR', 'pickle', 'task1-SR-dataset.pickle'
+        )
+
+    dataset_path_task2 = os.path.join(
+        '../', 'dataset', 'ZuCo',
+        'task2-NR', 'pickle', 'task2-NR-dataset.pickle'
+        )
+
+    dataset_path_task2_v2 = os.path.join(
+        '../', 'dataset', 'ZuCo',
+        'task2-NR-2.0', 'pickle', 'task2-NR-2.0-dataset.pickle'
+        )
+
+    whole_dataset_dicts = []
+    for t in [dataset_path_task1, dataset_path_task2, dataset_path_task2_v2]:
+        with open(t, 'rb') as handle:
+            whole_dataset_dicts.append(pickle.load(handle))
+
+    # initialize
+    # dict that maps sentence to set of EEG signals belonging to same sentence different subjects
+    fs = {}
+    for anchor in all sentences:
+        add anchor as key if not in dict
+        for each subject:
+            for each sentence:
+                if sentence == anchor:
+                    fs[sentence].append(eeg for that sentence)
+    # dict that maps subject to a set of EEG signals belonging to sentences from same subject
+    # set of all sentences
+    fp = {}
+
+    # call
+    # input: EGG, subject, sentence, curriculum level
+    # output: contrastive triplet
