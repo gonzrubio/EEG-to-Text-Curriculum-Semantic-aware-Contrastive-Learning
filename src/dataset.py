@@ -5,11 +5,12 @@ Adapted from https://github.com/MikeWangWZHL/EEG-To-Text/blob/main/data.py
 
 import os
 import pickle
+from collections import defaultdict
 from tqdm import tqdm
 
 import torch
 from transformers import BartTokenizer
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 from data.get_input_sample import get_input_sample
 
@@ -164,6 +165,42 @@ class ZuCo(Dataset):
             self.inputs.append(input_sample)
 
 
+def build_CSCL_inputs(dataset):
+    # TODO save dict and load when training
+    fs, fp, S = defaultdict(set), defaultdict(set), set()
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+
+    # Dictionary to store sentence occurrences
+    sentence_occurrences = defaultdict(int)
+
+    for sample in dataloader:
+        eeg = sample[0][0]
+        input_attn_mask = sample[2][0]
+        subject = sample[-2][0]
+        sentence = sample[-1][0]
+
+        # Update sentence occurrences
+        sentence_occurrences[sentence] += 1
+
+        # sentence to set of EEG signals from all subjects for such sentence
+        fs[sentence].add((eeg, input_attn_mask))
+
+        # subject to set of EEG signals for that subject
+        fp[subject].add((eeg, input_attn_mask))
+
+        # set of all sentences
+        S.add(sentence)
+
+    # TODO
+    # occ = [len(fs[sentence]) for sentence in fs.keys()]
+    occ = [value for value in sentence_occurrences.values()]
+    # there are duplicates probably in NRV1, confirm that there are duplictes there
+    # how many unique sentences should there be if none are repeated for a given subject? 0.8*(400+300+349)=839?
+    # add number of unique sentences for a given subject for all tasks splits and has to equal len(fs), occ, S and len(sentence_occurences)
+
+    return fs, fp, S
+
+
 def main():
     """ML-ready ZuCo dataset sanity check."""
     # load the pickle files for all tasks
@@ -225,6 +262,9 @@ def main():
             setting=dataset_setting
             )
         print(f' {split}set size:', len(dataset))
+
+        if split == 'train':
+            fs, fp, S = build_CSCL_inputs(dataset)
 
 
 if __name__ == '__main__':
