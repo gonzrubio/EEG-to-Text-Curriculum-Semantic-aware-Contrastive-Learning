@@ -45,12 +45,14 @@ class ZuCo(Dataset):
         - ['ZPH'] for test
 
     The getter method returns a tuple of:
-            - Word-level EEG embeddings of the sentence.
-            - Number of non-padding tokens in the sentence.
-            - Attention mask for input embeddings.
-            - Inverted attention mask.
-            - Tokenized and encoded target sentence.
-            - Attention mask for target sentence.
+        - Word-level EEG embeddings of the sentence.
+        - Number of non-padding tokens in the sentence.
+        - Attention mask for input embeddings.
+        - Inverted attention mask.
+        - Tokenized target sentence.
+        - Attention mask for target sentence.
+        - The subject.
+        - The target sentence.
 
     """
 
@@ -102,7 +104,9 @@ class ZuCo(Dataset):
             input_sample['input_attn_mask'],
             input_sample['input_attn_mask_invert'],
             input_sample['target_ids'],
-            input_sample['target_mask']
+            input_sample['target_mask'],
+            input_sample['subject'],
+            input_sample['sentence']
         )
 
     def __len__(self):
