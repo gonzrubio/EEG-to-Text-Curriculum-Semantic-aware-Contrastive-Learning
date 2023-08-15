@@ -116,19 +116,8 @@ if __name__ == "__main__":
         with open(t, 'rb') as handle:
             whole_dataset_dicts.append(pickle.load(handle))
 
-    # initialize
-    # dict that maps sentence to set of EEG signals belonging to same sentence different subjects
-    fs = {}
-    for anchor in all sentences:
-        add anchor as key if not in dict
-        for each subject:
-            for each sentence:
-                if sentence == anchor:
-                    fs[sentence].append(eeg for that sentence)
-    # dict that maps subject to a set of EEG signals belonging to sentences from same subject
-    # set of all sentences
-    fp = {}
-
-    # call
-    # input: EGG, subject, sentence, curriculum level
-    # output: contrastive triplet
+    # fs, fp, S = build_CSCL_inputs(whole_dataset_dicts)
+    # cscl = CSCL(fp, fs, S)
+    # triplet cscl.get_triplet(EGG, subject, sentence, curriculum level) or
+    # or
+    # triplet = cscl(EGG, subject, sentence, curriculum level)
