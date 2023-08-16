@@ -5,11 +5,12 @@ Adapted from https://github.com/MikeWangWZHL/EEG-To-Text/blob/main/data.py
 
 import os
 import pickle
+from collections import defaultdict
 from tqdm import tqdm
 
 import torch
 from transformers import BartTokenizer
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 from data.get_input_sample import get_input_sample
 
@@ -45,12 +46,14 @@ class ZuCo(Dataset):
         - ['ZPH'] for test
 
     The getter method returns a tuple of:
-            - Word-level EEG embeddings of the sentence.
-            - Number of non-padding tokens in the sentence.
-            - Attention mask for input embeddings.
-            - Inverted attention mask.
-            - Tokenized and encoded target sentence.
-            - Attention mask for target sentence.
+        - Word-level EEG embeddings of the sentence.
+        - Number of non-padding tokens in the sentence.
+        - Attention mask for input embeddings.
+        - Inverted attention mask.
+        - Tokenized target sentence.
+        - Attention mask for target sentence.
+        - The subject.
+        - The target sentence.
 
     """
 
@@ -102,7 +105,9 @@ class ZuCo(Dataset):
             input_sample['input_attn_mask'],
             input_sample['input_attn_mask_invert'],
             input_sample['target_ids'],
-            input_sample['target_mask']
+            input_sample['target_mask'],
+            input_sample['subject'],
+            input_sample['sentence']
         )
 
     def __len__(self):
@@ -158,6 +163,50 @@ class ZuCo(Dataset):
                 input_dataset_dict[key][i]['word_tokens_all']
                 )
             self.inputs.append(input_sample)
+
+
+def build_CSCL_maps(dataset):
+    """Construct sentence/subject to set of EEGs.
+
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+        The input dataset with EEG signals, masks, subjects, and sentences.
+
+    fs : defaultdict(set)
+        A dictionary mapping sentences to sets of EEG signals and their
+        corresponding attention masks. Each sentence in the dataset is
+        associated with a set of EEG signals and masks from all subjects.
+
+    fp : defaultdict(set)
+        A dictionary mapping subjects to sets of EEG signals and their
+        corresponding attention masks. Each subject in the dataset is
+        associated with a set of EEG signals and masks.
+
+    S : set
+        A set containing all unique sentences present in the dataset. Each
+        sentence in the dataset is included once in this set.
+
+    """
+    fs, fp, S = defaultdict(set), defaultdict(set), set()
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+
+    for sample in dataloader:
+        eeg = sample[0][0]
+        input_attn_mask = sample[2][0]
+        subject = sample[-2][0]
+        sentence = sample[-1][0]
+
+        # sentence to set of EEG signals from all subjects for such sentence
+        fs[sentence].add((eeg, input_attn_mask))
+
+        # subject to set of EEG signals for that subject
+        fp[subject].add((eeg, input_attn_mask))
+
+        # set of all sentences
+        S.add(sentence)
+
+    return fs, fp, S
 
 
 def main():
@@ -221,6 +270,9 @@ def main():
             setting=dataset_setting
             )
         print(f' {split}set size:', len(dataset))
+
+        if split == 'train':
+            fs, fp, S = build_CSCL_maps(dataset)
 
 
 if __name__ == '__main__':
