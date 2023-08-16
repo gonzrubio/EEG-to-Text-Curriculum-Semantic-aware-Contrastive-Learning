@@ -165,22 +165,37 @@ class ZuCo(Dataset):
             self.inputs.append(input_sample)
 
 
-def build_CSCL_inputs(dataset):
-    # TODO save dict and load when training
+def build_CSCL_maps(dataset):
+    """Construct sentence/subject to set of EEGs.
+
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+        The input dataset with EEG signals, masks, subjects, and sentences.
+
+    fs : defaultdict(set)
+        A dictionary mapping sentences to sets of EEG signals and their
+        corresponding attention masks. Each sentence in the dataset is
+        associated with a set of EEG signals and masks from all subjects.
+
+    fp : defaultdict(set)
+        A dictionary mapping subjects to sets of EEG signals and their
+        corresponding attention masks. Each subject in the dataset is
+        associated with a set of EEG signals and masks.
+
+    S : set
+        A set containing all unique sentences present in the dataset. Each
+        sentence in the dataset is included once in this set.
+
+    """
     fs, fp, S = defaultdict(set), defaultdict(set), set()
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
-
-    # Dictionary to store sentence occurrences
-    sentence_occurrences = defaultdict(int)
 
     for sample in dataloader:
         eeg = sample[0][0]
         input_attn_mask = sample[2][0]
         subject = sample[-2][0]
         sentence = sample[-1][0]
-
-        # Update sentence occurrences
-        sentence_occurrences[sentence] += 1
 
         # sentence to set of EEG signals from all subjects for such sentence
         fs[sentence].add((eeg, input_attn_mask))
@@ -190,13 +205,6 @@ def build_CSCL_inputs(dataset):
 
         # set of all sentences
         S.add(sentence)
-
-    # TODO
-    # occ = [len(fs[sentence]) for sentence in fs.keys()]
-    occ = [value for value in sentence_occurrences.values()]
-    # there are duplicates probably in NRV1, confirm that there are duplictes there
-    # how many unique sentences should there be if none are repeated for a given subject? 0.8*(400+300+349)=839?
-    # add number of unique sentences for a given subject for all tasks splits and has to equal len(fs), occ, S and len(sentence_occurences)
 
     return fs, fp, S
 
@@ -264,7 +272,7 @@ def main():
         print(f' {split}set size:', len(dataset))
 
         if split == 'train':
-            fs, fp, S = build_CSCL_inputs(dataset)
+            fs, fp, S = build_CSCL_maps(dataset)
 
 
 if __name__ == '__main__':
