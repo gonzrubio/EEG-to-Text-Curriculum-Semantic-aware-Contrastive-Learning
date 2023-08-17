@@ -19,16 +19,16 @@ class CSCL:
 
     Args:
     ----
-        sentences (list): A set of all sentences S.
+        S (set): The set of all sentences.
         fs (dict): A mapping from sentence Si to a set of EEG signals ESi.
         fp (dict): A mapping from subject pi to a set of EEG signals Epi.
 
     """
 
-    def __init__(self, sentences, fs, fp):
-        self.sentences = sentences
+    def __init__(self, fs, fp, S):
         self.fs = fs
         self.fp = fp
+        self.S = S
 
     def C_SCL(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet.
@@ -130,8 +130,9 @@ if __name__ == "__main__":
         setting=dataset_setting
         )
 
+    # train pre-encoder
     fs, fp, S = build_CSCL_maps(train_data)
-    # cscl = CSCL(fp, fs, S)
+    cscl = CSCL(fs, fp, S)
     # triplet cscl.get_triplet(EGG, subject, sentence, curriculum level) or
     # or
     # triplet = cscl(EGG, subject, sentence, curriculum level)
