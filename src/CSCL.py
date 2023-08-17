@@ -30,13 +30,8 @@ class CSCL:
         self.fp = fp
         self.S = S
 
-    def C_SCL(self, Ei, pi, Si, curr_level):
-        """Create a contrastive triplet.
-
-        C_SCL(Ei, pi, Si, curr_level):
-            Create a contrastive triplet composed of a positive sample E_plus_i_curr_level
-            and a negative sample E_minus_i_curr_level.
-        """
+    def get_triplet(self, Ei, pi, Si, curr_level):
+        """Create a contrastive triplet."""
         # Positive sample
         E_plus_i = self.fs[Si] - Ei
         E_plus_i_sorted_desc = self.cur_cri(E_plus_i, order='descend')
@@ -53,11 +48,7 @@ class CSCL:
         return Ei, E_plus_i_curr_level, E_minus_i_curr_level
 
     def cur_cri(self, E, order):
-        """Curriculum criterion.
-
-        cur_cri(E, order):
-            Calculate the curriculum criterion, sorting EEG signals based on similarity.
-        """
+        """Curriculum criterion - sort the EEG signals based on similarity."""
         sims = []
         for Ej in E:
             # simj = cosine_similarity(E, Ej)
@@ -66,11 +57,7 @@ class CSCL:
         return E[indices]
 
     def cur_lev(self, E):
-        """Curriculum level.
-
-        cur_lev(E):
-            Determine curriculum levels by dividing EEG signals into easy, medium, and hard subsets.
-        """
+        """Curriculum level - Divide EEG signals into easy, medium and hard."""
         length = len(E)
         step = length // 3
         E_easy = E[:step]
@@ -79,11 +66,7 @@ class CSCL:
         return [E_easy, E_medium, E_hard]
 
     def cur_sche(self, curriculums, curr_level):
-        """Curriculum scheduler.
-
-        cur_sche(curriculums, curr_level):
-            Select EEG signals based on the current curriculum level.
-        """
+        """Curriculum scheduler - Sample a signal based on the level"""
         E_select = curriculums[curr_level]
         selected_E = np.random.choice(E_select)
         return selected_E
@@ -133,6 +116,4 @@ if __name__ == "__main__":
     # train pre-encoder
     fs, fp, S = build_CSCL_maps(train_data)
     cscl = CSCL(fs, fp, S)
-    # triplet cscl.get_triplet(EGG, subject, sentence, curriculum level) or
-    # or
-    # triplet = cscl(EGG, subject, sentence, curriculum level)
+    # triplet = cscl.get_triplet(EGG, subject, sentence, curriculum level)
