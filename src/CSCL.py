@@ -2,15 +2,12 @@
 
 import os
 import pickle
-# import random
 
 import numpy as np
 
-# from sklearn.metrics.pairwise import cosine_similarity
-from torch.utils.data import DataLoader
 from transformers import BartTokenizer
 
-from dataset import ZuCo
+from dataset import ZuCo, build_CSCL_maps
 
 
 class CSCL:
@@ -94,6 +91,7 @@ class CSCL:
 
 if __name__ == "__main__":
 
+    # dataset splits
     whole_dataset_dicts = []
 
     dataset_path_task1 = os.path.join(
@@ -116,7 +114,23 @@ if __name__ == "__main__":
         with open(t, 'rb') as handle:
             whole_dataset_dicts.append(pickle.load(handle))
 
-    # fs, fp, S = build_CSCL_inputs(whole_dataset_dicts)
+    tokenizer = BartTokenizer.from_pretrained('facebook/bart-large')
+    subject_choice = 'ALL'
+    eeg_type_choice = 'GD'
+    bands_choice = 'ALL'
+    dataset_setting = 'unique_sent'
+
+    train_data = ZuCo(
+        whole_dataset_dicts,
+        'train',
+        tokenizer,
+        subject=subject_choice,
+        eeg_type=eeg_type_choice,
+        bands=bands_choice,
+        setting=dataset_setting
+        )
+
+    fs, fp, S = build_CSCL_maps(train_data)
     # cscl = CSCL(fp, fs, S)
     # triplet cscl.get_triplet(EGG, subject, sentence, curriculum level) or
     # or
