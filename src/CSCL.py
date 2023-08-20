@@ -2,8 +2,7 @@
 
 import os
 import pickle
-
-import numpy as np
+import random
 
 import torch
 import torch.nn.functional as F
@@ -35,13 +34,13 @@ class CSCL:
 
     def get_triplet(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet."""
-        # Positive sample
+        # Positive pairs
         E_positive = self.fs[Si[0]]
         E_positive_sorted = self.cur_cri(Ei[0], E_positive, descending=True)
         curriculums = self.cur_lev(E_positive_sorted)
         E_positive_curriculum = self.cur_sche(curriculums, curr_level)
 
-        # Negative sample
+        # Negative pairs
         S_minus_i = list(set(self.sentences) - set([Si]))
         E_negative = np.concatenate([self.fp[p] for p in self.fp.keys() if p != pi])
         E_negative_sorted = self.cur_cri(E_negative, order='ascend')
@@ -84,10 +83,10 @@ class CSCL:
         return [E_easy, E_medium, E_hard]
 
     def cur_sche(self, curriculums, curr_level):
-        """Curriculum scheduler - Sample a signal based on the level"""
+        """Curriculum scheduler - Sample a signal based on the level."""
         E_select = curriculums[curr_level]
-        selected_E = np.random.choice(E_select)
-        return selected_E
+        E = E_select[random.randint(0, E_select.shape[0]-1)]
+        return E
 
 
 if __name__ == "__main__":
