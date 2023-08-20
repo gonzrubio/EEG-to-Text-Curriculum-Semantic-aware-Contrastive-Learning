@@ -36,19 +36,19 @@ class CSCL:
     def get_triplet(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet."""
         # Positive sample
-        E_plus_i = self.fs[Si[0]]
-        E_plus_i_sorted_desc = self.cur_cri(Ei[0], E_plus_i, descending=True)
-        curriculums = self.cur_lev(E_plus_i_sorted_desc)
-        E_plus_i_curr_level = self.cur_sche(curriculums, curr_level)
+        E_positive = self.fs[Si[0]]
+        E_positive_sorted = self.cur_cri(Ei[0], E_positive, descending=True)
+        curriculums = self.cur_lev(E_positive_sorted)
+        E_positive_curriculum = self.cur_sche(curriculums, curr_level)
 
         # Negative sample
         S_minus_i = list(set(self.sentences) - set([Si]))
-        E_minus_i = np.concatenate([self.fp[p] for p in self.fp.keys() if p != pi])
-        E_minus_i_sorted_asc = self.cur_cri(E_minus_i, order='ascend')
-        curriculums = self.cur_lev(E_minus_i_sorted_asc)
-        E_minus_i_curr_level = self.cur_sche(curriculums, curr_level)
+        E_negative = np.concatenate([self.fp[p] for p in self.fp.keys() if p != pi])
+        E_negative_sorted = self.cur_cri(E_negative, order='ascend')
+        curriculums = self.cur_lev(E_negative_sorted)
+        E_negative_curriculum = self.cur_sche(curriculums, curr_level)
 
-        return Ei, E_plus_i_curr_level, E_minus_i_curr_level
+        return Ei, E_positive_curriculum, E_negative_curriculum
 
     def cur_cri(self, Ei, E, descending):
         """Curriculum criterion - sort the EEG signals based on similarity."""
