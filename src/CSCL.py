@@ -5,6 +5,9 @@ import pickle
 
 import numpy as np
 
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
 from transformers import BartTokenizer
 
 from dataset import ZuCo, build_CSCL_maps
@@ -33,8 +36,9 @@ class CSCL:
     def get_triplet(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet."""
         # Positive sample
-        E_plus_i = self.fs[Si] - Ei
-        E_plus_i_sorted_desc = self.cur_cri(E_plus_i, order='descend')
+        # E_plus_i = self.fs[Si] - Ei
+        E_plus_i = self.fs[Si[0]]
+        E_plus_i_sorted_desc = self.cur_cri(Ei[0], E_plus_i, order='descend')
         curriculums = self.cur_lev(E_plus_i_sorted_desc)
         E_plus_i_curr_level = self.cur_sche(curriculums, curr_level)
 
@@ -47,13 +51,26 @@ class CSCL:
 
         return Ei, E_plus_i_curr_level, E_minus_i_curr_level
 
-    def cur_cri(self, E, order):
+    def cur_cri(self, Ei, E, order):
         """Curriculum criterion - sort the EEG signals based on similarity."""
         sims = []
-        for Ej in E:
-            # simj = cosine_similarity(E, Ej)
+        for (Ej, _) in E:
+            # print(Ei.shape, Ej.shape)
+            simj = F.cosine_similarity(
+                Ei.sum(dim=0) / Ei[:, 0].count_nonzero(),
+                Ej.sum(dim=0) / Ej[:, 0].count_nonzero(),
+                dim=0
+                )
+            print(simj.item())
             sims.append(simj)
-        indices = np.argsort(sims, order=order)
+        sims, indices = torch.sort(torch.tensor(sims), descending=True)
+
+        # TODO ignore anchor, E+i = fs(Si)\Ei
+        # E_sorted = torch.empty((len(indices)-1, Ei.shape[0], Ei.shape[1]))
+        # for idx in indices[1:]:
+        #     print(idx.item())
+        #     E_sorted[idx, :] = 
+        #     print(simj.item())
         return E[indices]
 
     def cur_lev(self, E):
@@ -74,46 +91,47 @@ class CSCL:
 
 if __name__ == "__main__":
 
-    # dataset splits
-    whole_dataset_dicts = []
-
+    # load data
     dataset_path_task1 = os.path.join(
         '../', 'dataset', 'ZuCo',
         'task1-SR', 'pickle', 'task1-SR-dataset.pickle'
         )
 
-    dataset_path_task2 = os.path.join(
-        '../', 'dataset', 'ZuCo',
-        'task2-NR', 'pickle', 'task2-NR-dataset.pickle'
-        )
+    with open(dataset_path_task1, 'rb') as handle:
+        dataset_dict = [pickle.load(handle)]
 
-    dataset_path_task2_v2 = os.path.join(
-        '../', 'dataset', 'ZuCo',
-        'task2-NR-2.0', 'pickle', 'task2-NR-2.0-dataset.pickle'
-        )
-
-    whole_dataset_dicts = []
-    for t in [dataset_path_task1, dataset_path_task2, dataset_path_task2_v2]:
-        with open(t, 'rb') as handle:
-            whole_dataset_dicts.append(pickle.load(handle))
-
-    tokenizer = BartTokenizer.from_pretrained('facebook/bart-large')
-    subject_choice = 'ALL'
-    eeg_type_choice = 'GD'
-    bands_choice = 'ALL'
-    dataset_setting = 'unique_sent'
-
-    train_data = ZuCo(
-        whole_dataset_dicts,
+    dataset = ZuCo(
+        dataset_dict,
         'train',
-        tokenizer,
-        subject=subject_choice,
-        eeg_type=eeg_type_choice,
-        bands=bands_choice,
-        setting=dataset_setting
+        BartTokenizer.from_pretrained('facebook/bart-large'),
+        subject='ALL',
+        eeg_type='GD',
+        bands='ALL',
+        setting='unique_sent'
         )
 
-    # train pre-encoder
-    fs, fp, S = build_CSCL_maps(train_data)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+
+    # sample batch of eeg-text pairs (for a given subject)
+    data_sample = next(iter(dataloader))
+    EGG = data_sample[0]
+    subject = data_sample[-2]
+    sentence = data_sample[-1]
+
+    # sample contrastive triplet
+    fs, fp, S = build_CSCL_maps(dataset)
     cscl = CSCL(fs, fp, S)
-    # triplet = cscl.get_triplet(EGG, subject, sentence, curriculum level)
+
+    for level in range(3):
+        triplet = cscl.get_triplet(EGG, subject, sentence, level)
+
+
+
+
+
+
+
+
+
+
+
