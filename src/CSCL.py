@@ -36,9 +36,8 @@ class CSCL:
     def get_triplet(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet."""
         # Positive sample
-        # E_plus_i = self.fs[Si] - Ei
         E_plus_i = self.fs[Si[0]]
-        E_plus_i_sorted_desc = self.cur_cri(Ei[0], E_plus_i, order='descend')
+        E_plus_i_sorted_desc = self.cur_cri(Ei[0], E_plus_i, descending=True)
         curriculums = self.cur_lev(E_plus_i_sorted_desc)
         E_plus_i_curr_level = self.cur_sche(curriculums, curr_level)
 
@@ -51,9 +50,11 @@ class CSCL:
 
         return Ei, E_plus_i_curr_level, E_minus_i_curr_level
 
-    def cur_cri(self, Ei, E, order):
+    def cur_cri(self, Ei, E, descending):
         """Curriculum criterion - sort the EEG signals based on similarity."""
         sims = []
+        E_sorted = []
+
         for (Ej, _) in E:
             # print(Ei.shape, Ej.shape)
             simj = F.cosine_similarity(
@@ -61,17 +62,17 @@ class CSCL:
                 Ej.sum(dim=0) / Ej[:, 0].count_nonzero(),
                 dim=0
                 )
-            print(simj.item())
+            # print(simj.item())
             sims.append(simj)
-        sims, indices = torch.sort(torch.tensor(sims), descending=True)
+            E_sorted.append(Ej)
 
-        # TODO ignore anchor, E+i = fs(Si)\Ei
-        # E_sorted = torch.empty((len(indices)-1, Ei.shape[0], Ei.shape[1]))
-        # for idx in indices[1:]:
-        #     print(idx.item())
-        #     E_sorted[idx, :] = 
-        #     print(simj.item())
-        return E[indices]
+        sims, indices = torch.sort(torch.tensor(sims), descending=descending)
+
+        # ignore anchor, E+i = fs(Si)\Ei
+        E_sorted = [E_sorted[j].unsqueeze(0) for j in indices[1:]]
+        E_sorted = torch.cat(E_sorted, dim=0)
+
+        return E_sorted
 
     def cur_lev(self, E):
         """Curriculum level - Divide EEG signals into easy, medium and hard."""
