@@ -43,8 +43,10 @@ class CSCL:
         curriculums = self.cur_lev(E_positive_sorted)
         E_positive_curriculum = self.cur_sche(curriculums, curr_level)
         # Negative pairs
-        S_minus_i = list(set(self.S) - set([Si]))
-        E_negative = np.concatenate([self.fp[p] for p in self.fp.keys() if p != pi])
+        E_negative = self.S
+        E_negative.remove(Si[0])
+        E_negative = {e for s in E_negative for e in self.fs.get(s, set())}
+        E_negative.difference_update(self.fp[pi[0]])
         E_negative_sorted = self.cur_cri(E_negative, order='ascend')
         curriculums = self.cur_lev(E_negative_sorted)
         E_negative_curriculum = self.cur_sche(curriculums, curr_level)
