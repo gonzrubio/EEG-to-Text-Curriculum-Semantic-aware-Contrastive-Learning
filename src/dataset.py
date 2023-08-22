@@ -13,6 +13,7 @@ from transformers import BartTokenizer
 from torch.utils.data import Dataset, DataLoader
 
 from data.get_input_sample import get_input_sample
+from utils.HashTensor import HashTensor
 
 
 class ZuCo(Dataset):
@@ -193,15 +194,15 @@ def build_CSCL_maps(dataset):
 
     for sample in dataloader:
         eeg = sample[0][0]
-        input_attn_mask = sample[2][0]
+        # input_attn_mask = sample[2][0]
         subject = sample[-2][0]
         sentence = sample[-1][0]
 
         # sentence to set of EEG signals from all subjects for such sentence
-        fs[sentence].add((eeg, input_attn_mask))
+        fs[sentence].add(HashTensor(eeg))
 
         # subject to set of EEG signals for that subject
-        fp[subject].add((eeg, input_attn_mask))
+        fp[subject].add(HashTensor(eeg))
 
         # set of all sentences
         S.add(sentence)

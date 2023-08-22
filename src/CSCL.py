@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from transformers import BartTokenizer
 
+from utils.HashTensor import HashTensor
 from dataset import ZuCo, build_CSCL_maps
 
 
@@ -35,42 +36,35 @@ class CSCL:
     def get_triplet(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet."""
         # Positive pairs
+        Ei = HashTensor(Ei[0])
         E_positive = self.fs[Si[0]]
-        E_positive_sorted = self.cur_cri(Ei[0], E_positive, descending=True)
+        E_positive.remove(Ei)
+        E_positive_sorted = self.cur_cri(Ei, E_positive, descending=True)
         curriculums = self.cur_lev(E_positive_sorted)
         E_positive_curriculum = self.cur_sche(curriculums, curr_level)
-
         # Negative pairs
-        S_minus_i = list(set(self.sentences) - set([Si]))
+        S_minus_i = list(set(self.S) - set([Si]))
         E_negative = np.concatenate([self.fp[p] for p in self.fp.keys() if p != pi])
         E_negative_sorted = self.cur_cri(E_negative, order='ascend')
         curriculums = self.cur_lev(E_negative_sorted)
         E_negative_curriculum = self.cur_sche(curriculums, curr_level)
-
         return Ei, E_positive_curriculum, E_negative_curriculum
 
     def cur_cri(self, Ei, E, descending):
         """Curriculum criterion - sort the EEG signals based on similarity."""
         sims = []
         E_sorted = []
-
-        for (Ej, _) in E:
-            # print(Ei.shape, Ej.shape)
+        for Ej in E:
             simj = F.cosine_similarity(
                 Ei.sum(dim=0) / Ei[:, 0].count_nonzero(),
                 Ej.sum(dim=0) / Ej[:, 0].count_nonzero(),
                 dim=0
                 )
-            # print(simj.item())
             sims.append(simj)
             E_sorted.append(Ej)
-
         sims, indices = torch.sort(torch.tensor(sims), descending=descending)
-
-        # ignore anchor, E+i = fs(Si)\Ei
-        E_sorted = [E_sorted[j].unsqueeze(0) for j in indices[1:]]
+        E_sorted = [E_sorted[j].unsqueeze(0) for j in indices]
         E_sorted = torch.cat(E_sorted, dim=0)
-
         return E_sorted
 
     def cur_lev(self, E):
