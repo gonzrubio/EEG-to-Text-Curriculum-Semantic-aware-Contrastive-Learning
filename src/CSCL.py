@@ -47,7 +47,7 @@ class CSCL:
         E_negative.remove(Si[0])
         E_negative = {e for s in E_negative for e in self.fs.get(s, set())}
         E_negative.difference_update(self.fp[pi[0]])
-        E_negative_sorted = self.cur_cri(E_negative, order='ascend')
+        E_negative_sorted = self.cur_cri(Ei, E_negative, descending=False)
         curriculums = self.cur_lev(E_negative_sorted)
         E_negative_curriculum = self.cur_sche(curriculums, curr_level)
         return Ei, E_positive_curriculum, E_negative_curriculum
