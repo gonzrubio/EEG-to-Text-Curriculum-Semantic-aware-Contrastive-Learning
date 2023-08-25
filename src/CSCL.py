@@ -49,7 +49,7 @@ class CSCL:
         E_negative_sorted = self.cur_cri(Ei, E_negative, descending=False)
         curriculums = self.cur_lev(E_negative_sorted)
         E_negative_curriculum = self.cur_sche(curriculums, curr_level)
-        return Ei, E_positive_curriculum, E_negative_curriculum
+        return Ei.obj, E_positive_curriculum, E_negative_curriculum
 
     def cur_cri(self, Ei, E, descending):
         """Curriculum criterion - sort the EEG signals based on similarity."""
@@ -110,8 +110,8 @@ if __name__ == "__main__":
     # sample batch of eeg-text pairs (for a given subject)
     data_sample = next(iter(dataloader))
     EGG = data_sample[0]
-    subject = data_sample[-2]
     sentence = data_sample[-1]
+    subject = data_sample[-2]
 
     # sample contrastive triplet
     fs, fp, S = build_CSCL_maps(dataset)
