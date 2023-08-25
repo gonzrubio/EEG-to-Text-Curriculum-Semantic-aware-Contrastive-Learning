@@ -34,22 +34,30 @@ class CSCL:
 
     def get_triplet(self, Ei, pi, Si, curr_level):
         """Create a contrastive triplet."""
-        # Positive pairs
-        Ei = HashTensor(Ei[0])
-        E_positive = self.fs[Si[0]]
-        E_positive.remove(Ei)
-        E_positive_sorted = self.cur_cri(Ei, E_positive, descending=True)
-        curriculums = self.cur_lev(E_positive_sorted)
-        E_positive_curriculum = self.cur_sche(curriculums, curr_level)
-        # Negative pairs
-        E_negative = self.S
-        E_negative.remove(Si[0])
-        E_negative = {e for s in E_negative for e in self.fs.get(s, set())}
-        E_negative.difference_update(self.fp[pi[0]])
-        E_negative_sorted = self.cur_cri(Ei, E_negative, descending=False)
-        curriculums = self.cur_lev(E_negative_sorted)
-        E_negative_curriculum = self.cur_sche(curriculums, curr_level)
-        return Ei.obj, E_positive_curriculum, E_negative_curriculum
+        E_positive_curriculum = torch.empty_like(Ei)
+        E_negative_curriculum = torch.empty_like(Ei)
+
+        # prepare batch of contrastive triplets ##### also zip eeg
+        for i, (eeg, s, p) in enumerate(zip(Ei, Si, pi)):
+            eeg = HashTensor(eeg)
+
+            # Positive pairs
+            E_positive = set(self.fs[s])
+            E_positive.remove(eeg)
+            E_positive_sorted = self.cur_cri(eeg, E_positive, descending=True)
+            curriculums = self.cur_lev(E_positive_sorted)
+            E_positive_curriculum[i] = self.cur_sche(curriculums, curr_level)
+
+            # Negative pairs
+            E_negative = set(self.S)
+            E_negative.remove(s)
+            E_negative = {e for ss in E_negative for e in self.fs.get(ss, set())}
+            E_negative.difference_update(self.fp[p])
+            E_negative_sorted = self.cur_cri(eeg, E_negative, descending=False)
+            curriculums = self.cur_lev(E_negative_sorted)
+            E_negative_curriculum[i] = self.cur_sche(curriculums, curr_level)
+
+        return Ei, E_positive_curriculum, E_negative_curriculum
 
     def cur_cri(self, Ei, E, descending):
         """Curriculum criterion - sort the EEG signals based on similarity."""
@@ -105,11 +113,11 @@ if __name__ == "__main__":
         setting='unique_sent'
         )
 
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=4, shuffle=False)
 
     # sample batch of eeg-text pairs (for a given subject)
     data_sample = next(iter(dataloader))
-    EGG = data_sample[0]
+    EEG = data_sample[0]
     sentence = data_sample[-1]
     subject = data_sample[-2]
 
@@ -117,16 +125,7 @@ if __name__ == "__main__":
     fs, fp, S = build_CSCL_maps(dataset)
     cscl = CSCL(fs, fp, S)
 
-    for level in range(3):
-        triplet = cscl.get_triplet(EGG, subject, sentence, level)
-
-
-
-
-
-
-
-
-
-
-
+    for curr_level in range(1):
+        # TODO plot triplet (or compute norms) for all levels and same anchor
+        E, E_pos, E_neg = cscl.get_triplet(EEG, subject, sentence, curr_level)
+        assert E.shape == E_pos.shape == E_neg.shape == EEG.shape
