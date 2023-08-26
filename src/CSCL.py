@@ -125,7 +125,24 @@ if __name__ == "__main__":
     fs, fp, S = build_CSCL_maps(dataset)
     cscl = CSCL(fs, fp, S)
 
-    for curr_level in range(1):
-        # TODO plot triplet (or compute norms) for all levels and same anchor
+    for curr_level in range(3):
         E, E_pos, E_neg = cscl.get_triplet(EEG, subject, sentence, curr_level)
         assert E.shape == E_pos.shape == E_neg.shape == EEG.shape
+
+        print(f'\ncurriculum level {curr_level}')
+        print('-------------------')
+        print('positive  negative')
+        print('--------  --------')
+        for e, e_pos, e_neg in zip(E, E_pos, E_neg):
+            sim_pos = F.cosine_similarity(
+                e.sum(dim=0) / E[:, 0].count_nonzero(),
+                e_pos.sum(dim=0) / e_pos[:, 0].count_nonzero(),
+                dim=0
+                )
+
+            sim_neg = F.cosine_similarity(
+                e.sum(dim=0) / E[:, 0].count_nonzero(),
+                e_neg.sum(dim=0) / e_neg[:, 0].count_nonzero(),
+                dim=0
+                )
+            print(f'{sim_pos.item():.4f}    {sim_neg.item():.4f}')
