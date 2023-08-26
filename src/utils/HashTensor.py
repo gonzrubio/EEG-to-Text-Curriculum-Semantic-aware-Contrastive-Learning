@@ -1,4 +1,7 @@
-"""Wrapper to store tensors in a set."""
+"""Wrapper to store tensors in a set.
+
+Note: CPU support only.
+"""
 
 import torch
 
