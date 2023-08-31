@@ -48,13 +48,12 @@ def train_CSCL(
                     E, E_pos, E_neg = cscl.get_triplet(
                         EEG, subject, sentence, level
                         )
-                    E = E.to(device)
-                    E_pos = E_pos.to(device)
-                    E_neg = E_neg.to(device)
 
                     with torch.set_grad_enabled(phase == 'train'):
-                        # TODO stack and do triplet in single pass, move to device after stack?
-                        out = model(E, mask.to(device))
+                        out = model(
+                            torch.vstack((E, E_pos, E_neg)).to(device),
+                            mask.repeat(3, 1).to(device)
+                            )
                         # TODO compute averaged vector of the outputs of the pre-encoder
                         # h, h_pos, h_neg = 
                         # TODO compute loss (equation 2)
