@@ -49,8 +49,8 @@ class ZuCo(Dataset):
     The getter method returns a tuple of:
         - Word-level EEG embeddings of the sentence.
         - Number of non-padding tokens in the sentence.
-        - Attention mask for input embeddings.
-        - Inverted attention mask.
+        - Attention mask for input embeddings (for huggingface).
+        - Inverted attention mask (for PyTorch).
         - Tokenized target sentence.
         - Attention mask for target sentence.
         - The subject.
