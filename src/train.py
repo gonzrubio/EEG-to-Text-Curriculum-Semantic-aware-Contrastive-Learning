@@ -42,8 +42,9 @@ def train_CSCL(
                     model.eval()
 
                 running_loss = 0.0
-                for EEG, _, _, _, _, _, subject, sentence in dataloaders[phase]:
-                    # online sample of contrastive triplets
+                loader = dataloaders[phase]
+
+                for EEG, _, _, mask, _, _, subject, sentence in loader:
                     E, E_pos, E_neg = cscl.get_triplet(
                         EEG, subject, sentence, level
                         )
@@ -51,38 +52,35 @@ def train_CSCL(
                     E_pos = E_pos.to(device)
                     E_neg = E_neg.to(device)
 
-                    # forward
-                    # with torch.set_grad_enabled(phase == 'train'):
-                        # seq2seqLMoutput = model(input_embeddings_batch, input_masks_batch, input_mask_invert_batch, target_ids_batch)
-                        # compute averaged vector of the outputs of the pre-encoder
-                        # compute loss (equation 2)
+                    with torch.set_grad_enabled(phase == 'train'):
+                        # TODO stack and do triplet in single pass, move to device after stack?
+                        out = model(E, mask.to(device))
+                        # TODO compute averaged vector of the outputs of the pre-encoder
+                        # h, h_pos, h_neg = 
+                        # TODO compute loss (equation 2)
+                        loss = loss_fn
 
-                        # backward + optimize only if in training phase
-                        # if phase == 'train':
-                        #     # with torch.autograd.detect_anomaly():
-                        #     optimizer.zero_grad(set to None)
-                        #     loss.backward()
-                        #     optimizer.step()
+                        if phase == 'train':
+                            optimizer.zero_grad(set_to_none=True)
+                            loss.backward()
+                            optimizer.step()
 
-                    # statistics
-                    # running_loss += loss.item() * input_embeddings_batch.size()[0] # batch loss
+                    running_loss += loss.item() * E.size(0)
 
-                # epoch_loss = running_loss / dataset_sizes[phase]
-                # print(f'{phase} Loss: {epoch_loss:.4f}')
+                epoch_loss = running_loss / len(loader)
+                print(f'{phase} Loss: {epoch_loss:.4f}')
 
-                # deep copy the model
-                # if phase == 'dev' and epoch_loss < best_loss:
-                #     best_loss = epoch_loss
-                #     best_model_wts = copy.deepcopy(model.state_dict())
+                if phase == 'dev' and epoch_loss < best_loss:
+                    best_loss = epoch_loss
+                    best_model_wts = copy.deepcopy(model.state_dict())
 
-            # print()
+            print()
 
-    # time_elapsed = time.time() - since
-    # print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-    # print(f'Best val loss: {best_loss:4f}')
+    time_elapsed = time.time() - since
+    print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
+    print(f'Best val loss: {best_loss:4f}')
 
-    # load best model weights
-    # model.load_state_dict(best_model_wts)
+    model.load_state_dict(best_model_wts)
     return model
 
 
