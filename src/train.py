@@ -54,8 +54,8 @@ def train_CSCL(
                             torch.vstack((E, E_pos, E_neg)).to(device),
                             mask.repeat(3, 1).to(device)
                             )
-                        # TODO compute averaged vector of the outputs of the pre-encoder
-                        # h, h_pos, h_neg = 
+                        h = torch.mean(out, dim=1)
+                        # h.view(3, -1, h.shape[-1]]
                         # TODO compute loss (equation 2)
                         loss = loss_fn
 
