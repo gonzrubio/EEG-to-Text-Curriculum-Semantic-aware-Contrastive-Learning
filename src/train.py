@@ -44,7 +44,8 @@ def train_CSCL(
                 running_loss = 0.0
                 loader = dataloaders[phase]
 
-                for EEG, _, _, mask, _, _, subject, sentence in loader:
+                for batch, data in enumerate(loader):
+                    EEG, _, _, mask, _, _, subject, sentence = data
                     E, E_pos, E_neg = cscl.get_triplet(
                         EEG, subject, sentence, level
                         )
@@ -56,8 +57,26 @@ def train_CSCL(
                             )
                         h = torch.mean(out, dim=1)
                         # h.view(3, -1, h.shape[-1]]
-                        # TODO compute loss (equation 2)
-                        loss = loss_fn
+
+                        import torch.nn.functional as F
+                        temp = 1  # 1e-05
+
+                        num = torch.exp(
+                            F.cosine_similarity(h[0, :], h[1, :], dim=0) / temp
+                            )
+
+                        denom = 0
+                        for j in range(E.size(0)):
+                            for kk in range(1, 3):
+                                denom += torch.exp(
+                                    F.cosine_similarity(
+                                        h[0, :], h[kk, :], dim=0
+                                        ) / temp
+                                    )
+
+                        loss = -torch.log(num / denom)
+                        # print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
+                        print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
 
                         if phase == 'train':
                             optimizer.zero_grad(set_to_none=True)
@@ -67,7 +86,8 @@ def train_CSCL(
                     running_loss += loss.item() * E.size(0)
 
                 epoch_loss = running_loss / len(loader)
-                print(f'{phase} Loss: {epoch_loss:.4f}')
+                # print(f'{phase} Loss: {epoch_loss:.4f}')
+                print(f'{phase} Loss: {epoch_loss:.4e}')
 
                 if phase == 'dev' and epoch_loss < best_loss:
                     best_loss = epoch_loss
@@ -98,7 +118,7 @@ def main():
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
         'temp': 1e-5,
-        'lr_pre': 1e-3,
+        'lr_pre': 1e-5,
         'epochs_pre': 1,
         'lr': 2e-5,
         'epochs': 1
