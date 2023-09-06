@@ -15,6 +15,7 @@ from dataset import ZuCo, build_CSCL_maps
 from model import BrainTranslatorPreEncoder, BrainTranslator
 from utils.set_seed import set_seed
 
+import torch.nn.functional as F
 
 def train_BrainTranslator(
         model, dataloaders, loss_fn, optimizer, epochs, device
@@ -45,24 +46,23 @@ def train_CSCL(
                 loader = dataloaders[phase]
 
                 for batch, data in enumerate(loader):
-                    EEG, _, _, mask, _, _, subject, sentence = data
-                    E, E_pos, E_neg = cscl.get_triplet(
+                    EEG, _, _, _, _, _, subject, sentence = data
+                    E, E_pos, E_neg, mask, mask_pos, mask_neg = cscl.get_triplet(
                         EEG, subject, sentence, level
                         )
 
                     with torch.set_grad_enabled(phase == 'train'):
                         out = model(
                             torch.vstack((E, E_pos, E_neg)).to(device),
-                            mask.repeat(3, 1).to(device)
+                            torch.vstack((mask, mask_pos, mask_neg)).to(device),
                             )
                         h = torch.mean(out, dim=1)
-                        # h.view(3, -1, h.shape[-1]]
+                        h = h.view(-1, 3, h.shape[-1])
 
-                        import torch.nn.functional as F
-                        temp = 1  # 1e-05
+                        temp = 1e-1
 
                         num = torch.exp(
-                            F.cosine_similarity(h[0, :], h[1, :], dim=0) / temp
+                            F.cosine_similarity(h[:, 0, :], h[:, 1, :], dim=1) / temp
                             )
 
                         denom = 0
@@ -70,11 +70,11 @@ def train_CSCL(
                             for kk in range(1, 3):
                                 denom += torch.exp(
                                     F.cosine_similarity(
-                                        h[0, :], h[kk, :], dim=0
+                                        h[:, 0, :], h[:, kk, :], dim=1
                                         ) / temp
                                     )
 
-                        loss = -torch.log(num / denom)
+                        loss = -torch.log(num / denom).mean()
                         # print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
                         print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
 
@@ -110,7 +110,7 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 1,  # 32
+        'batch_size': 32,  # 32
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
@@ -118,7 +118,7 @@ def main():
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
         'temp': 1e-5,
-        'lr_pre': 1e-5,
+        'lr_pre': 3e-4,
         'epochs_pre': 1,
         'lr': 2e-5,
         'epochs': 1
