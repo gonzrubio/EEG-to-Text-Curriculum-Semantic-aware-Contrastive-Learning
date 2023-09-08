@@ -194,7 +194,7 @@ def build_CSCL_maps(dataset):
 
     for sample in dataloader:
         eeg = sample[0][0]
-        # input_attn_mask = sample[2][0]
+        # input_attn_mask = sample[3][0]
         subject = sample[-2][0]
         sentence = sample[-1][0]
 

@@ -15,6 +15,7 @@ from dataset import ZuCo, build_CSCL_maps
 from model import BrainTranslatorPreEncoder, BrainTranslator
 from utils.set_seed import set_seed
 
+import torch.nn.functional as F
 
 def train_BrainTranslator(
         model, dataloaders, loss_fn, optimizer, epochs, device
@@ -44,20 +45,37 @@ def train_CSCL(
                 running_loss = 0.0
                 loader = dataloaders[phase]
 
-                for EEG, _, _, mask, _, _, subject, sentence in loader:
-                    E, E_pos, E_neg = cscl.get_triplet(
+                for batch, data in enumerate(loader):
+                    EEG, _, _, _, _, _, subject, sentence = data
+                    E, E_pos, E_neg, mask, mask_pos, mask_neg = cscl.get_triplet(
                         EEG, subject, sentence, level
                         )
 
                     with torch.set_grad_enabled(phase == 'train'):
                         out = model(
                             torch.vstack((E, E_pos, E_neg)).to(device),
-                            mask.repeat(3, 1).to(device)
+                            torch.vstack((mask, mask_pos, mask_neg)).to(device),
                             )
                         h = torch.mean(out, dim=1)
-                        # h.view(3, -1, h.shape[-1]]
-                        # TODO compute loss (equation 2)
-                        loss = loss_fn
+                        h = h.view(-1, 3, h.shape[-1])
+
+                        temp = 1
+
+                        num = torch.exp(
+                            F.cosine_similarity(h[:, 0, :], h[:, 1, :], dim=1) / temp
+                            )
+
+                        denom = torch.empty_like(num, device=num.device)
+                        for j in range(E.size(0)):
+                            denomjj = 0
+                            for jj in range(E.size(0)):
+                                denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 1, :], dim=0) / temp)
+                                denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 2, :], dim=0) / temp)
+                            denom[j] = denomjj
+
+                        loss = -torch.log(num / denom).mean()
+                        # print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
+                        print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
 
                         if phase == 'train':
                             optimizer.zero_grad(set_to_none=True)
@@ -67,7 +85,8 @@ def train_CSCL(
                     running_loss += loss.item() * E.size(0)
 
                 epoch_loss = running_loss / len(loader)
-                print(f'{phase} Loss: {epoch_loss:.4f}')
+                # print(f'{phase} Loss: {epoch_loss:.4f}')
+                print(f'{phase} Loss: {epoch_loss:.4e}')
 
                 if phase == 'dev' and epoch_loss < best_loss:
                     best_loss = epoch_loss
@@ -90,7 +109,7 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 1,  # 32
+        'batch_size': 1,
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
@@ -98,7 +117,7 @@ def main():
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
         'temp': 1e-5,
-        'lr_pre': 1e-3,
+        'lr_pre': 1e-6,
         'epochs_pre': 1,
         'lr': 2e-5,
         'epochs': 1

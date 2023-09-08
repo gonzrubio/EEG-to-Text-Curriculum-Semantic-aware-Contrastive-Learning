@@ -42,7 +42,7 @@ class CSCL:
         E_positive_curriculum = torch.empty_like(Ei)
         E_negative_curriculum = torch.empty_like(Ei)
 
-        # prepare batch of contrastive triplets ##### also zip eeg
+        # prepare batch of contrastive triplets
         for i, (eeg, s, p) in enumerate(zip(Ei, Si, pi)):
             eeg = HashTensor(eeg)
 
@@ -62,7 +62,12 @@ class CSCL:
             curriculums = self.cur_lev(E_negative_sorted)
             E_negative_curriculum[i] = self.cur_sche(curriculums, curr_level)
 
-        return Ei, E_positive_curriculum, E_negative_curriculum
+        # Masks (positions with the value of True will be ignored in encoder)
+        mask = Ei[:, :, 0] == 0
+        mask_positive = E_positive_curriculum[:, :, 0] == 0
+        mask_negative = E_negative_curriculum[:, :, 0] == 0
+
+        return Ei, E_positive_curriculum, E_negative_curriculum, mask, mask_positive, mask_negative
 
     def cur_cri(self, Ei, E, descending):
         """Curriculum criterion - sort the EEG signals based on similarity."""
@@ -131,7 +136,7 @@ if __name__ == "__main__":
     cscl = CSCL(fs, fp, S)
 
     for curr_level in range(3):
-        E, E_pos, E_neg = cscl.get_triplet(EEG, subject, sentence, curr_level)
+        E, E_pos, E_neg = cscl.get_triplet(EEG, subject, sentence, curr_level)[:3]
         assert E.shape == E_pos.shape == E_neg.shape == EEG.shape
 
         print(f'\ncurriculum level {curr_level}')
