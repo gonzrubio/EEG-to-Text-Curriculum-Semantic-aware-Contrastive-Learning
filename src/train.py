@@ -29,7 +29,7 @@ def train_CSCL(
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
 
-    for level in range(1):
+    for level in range(3):
         best_loss = 100000000000
 
         for epoch in range(epochs):
@@ -45,9 +45,9 @@ def train_CSCL(
                 running_loss = 0.0
                 loader = dataloaders[phase]
 
-                for batch, data in enumerate(loader):
-                    EEG, _, _, _, _, _, subject, sentence = data
-                    E, E_pos, E_neg, mask, mask_pos, mask_neg = cscl.get_triplet(
+                for batch, (EEG, _, _, _, _, _, subject, sentence) in enumerate(loader):
+
+                    E, E_pos, E_neg, mask, mask_pos, mask_neg = cscl[phase].get_triplet(
                         EEG, subject, sentence, level
                         )
 
@@ -75,14 +75,14 @@ def train_CSCL(
 
                         loss = -torch.log(num / denom).mean()
                         # print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
-                        print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
+                        # print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
 
                         if phase == 'train':
                             optimizer.zero_grad(set_to_none=True)
                             loss.backward()
                             optimizer.step()
 
-                    running_loss += loss.item() * E.size(0)
+                    running_loss += loss.item()
 
                 epoch_loss = running_loss / len(loader)
                 # print(f'{phase} Loss: {epoch_loss:.4f}')
@@ -109,18 +109,18 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 1,
+        'batch_size': 16,
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
         'nhead': 8,
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
-        'temp': 1e-5,
-        'lr_pre': 1e-6,
+        'temp': 5e-6,
+        'lr_pre': 1e-5,
         'epochs_pre': 1,
         'lr': 2e-5,
-        'epochs': 1
+        'epochs': 10
         }
 
     set_seed(cfg['seed'])
@@ -153,7 +153,7 @@ def main():
         train_set, batch_size=cfg['batch_size'], shuffle=cfg['shuffle']
         )
 
-    val_set = ZuCo(
+    dev_set = ZuCo(
         whole_dataset_dicts,
         'dev',
         BartTokenizer.from_pretrained('facebook/bart-large'),
@@ -163,11 +163,11 @@ def main():
         setting=cfg['dataset_setting']
         )
 
-    val_loader = DataLoader(
-        val_set, batch_size=cfg['batch_size'], shuffle=cfg['shuffle']
+    dev_loader = DataLoader(
+        dev_set, batch_size=cfg['batch_size'], shuffle=cfg['shuffle']
         )
 
-    dataloaders = {'train': train_loader, 'val': val_loader}
+    dataloaders = {'train': train_loader, 'dev': dev_loader}
 
     # train pre-encoder with CSCL
     model = BrainTranslatorPreEncoder(
@@ -179,7 +179,13 @@ def main():
         ).to(device)
 
     fs, fp, S = build_CSCL_maps(train_set)
-    cscl = CSCL(fs, fp, S)
+    cscl_train = CSCL(fs, fp, S)
+
+    fs, fp, S = build_CSCL_maps(dev_set)
+    cscl_dev = CSCL(fs, fp, S)
+
+    cscl = {'train': cscl_train, 'dev': cscl_dev}
+
     loss_fn = cfg['temp']  # TODO
     optimizer = optim.Adam(params=model.parameters(), lr=cfg['lr_pre'])
 
