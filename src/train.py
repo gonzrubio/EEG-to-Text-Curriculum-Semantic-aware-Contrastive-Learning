@@ -56,26 +56,40 @@ def train_CSCL(
                             torch.vstack((E, E_pos, E_neg)).to(device),
                             torch.vstack((mask, mask_pos, mask_neg)).to(device),
                             )
-                        h = torch.mean(out, dim=1)
-                        h = h.view(-1, 3, h.shape[-1])
+                        out = torch.mean(out, dim=1)
+                        h = out[:E.size(0), :]
+                        h_pos = out[E.size(0):2*E.size(0), :]
+                        h_neg = out[2*E.size(0):, :]
+                        # h = torch.mean(out, dim=1)
+                        # h = h.view(-1, 3, h.shape[-1])
 
                         temp = 1
 
-                        num = torch.exp(
-                            F.cosine_similarity(h[:, 0, :], h[:, 1, :], dim=1) / temp
-                            )
+                        num = torch.exp(F.cosine_similarity(h, h_pos, dim=1)/temp)
 
                         denom = torch.empty_like(num, device=num.device)
                         for j in range(E.size(0)):
                             denomjj = 0
                             for jj in range(E.size(0)):
-                                denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 1, :], dim=0) / temp)
-                                denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 2, :], dim=0) / temp)
+                                denomjj += torch.exp(F.cosine_similarity(h[j, :], h_pos[jj, :], dim=0) / temp)
+                                denomjj += torch.exp(F.cosine_similarity(h[j, :], h_neg[jj, :], dim=0) / temp)
                             denom[j] = denomjj
+
+                        # num = torch.exp(
+                        #     F.cosine_similarity(h[:, 0, :], h[:, 1, :], dim=1) / temp
+                        #     )
+
+                        # denom = torch.empty_like(num, device=num.device)
+                        # for j in range(E.size(0)):
+                        #     denomjj = 0
+                        #     for jj in range(E.size(0)):
+                        #         denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 1, :], dim=0) / temp)
+                        #         denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 2, :], dim=0) / temp)
+                        #     denom[j] = denomjj
 
                         loss = -torch.log(num / denom).mean()
                         # print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
-                        # print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
+                        print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
 
                         if phase == 'train':
                             optimizer.zero_grad(set_to_none=True)
@@ -109,18 +123,18 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 16,
+        'batch_size': 8,
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
         'nhead': 8,
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
-        'temp': 5e-6,
-        'lr_pre': 1e-5,
-        'epochs_pre': 1,
+        'temp': 1e-6,
+        'lr_pre': 1e-6,
+        'epochs_pre': 5,
         'lr': 2e-5,
-        'epochs': 10
+        'epochs': 1
         }
 
     set_seed(cfg['seed'])
