@@ -82,6 +82,9 @@ class BrainTranslatorPreEncoder(nn.Module):
         self.fc = nn.Linear(
             in_features=input_dim, out_features=dim_s2s, bias=True
             )
+        self.fc2 = nn.Linear(
+            in_features=dim_s2s, out_features=dim_s2s, bias=True
+            )
 
     def forward(self, src, mask_pre_encoder):
         """Forward pass of the BrainTranslatorPreEncoder model.
@@ -100,6 +103,7 @@ class BrainTranslatorPreEncoder(nn.Module):
             src, src_key_padding_mask=mask_pre_encoder
             )
         out = F.relu(self.fc(out))
+        out = self.fc2(out)
         return out
 
 
