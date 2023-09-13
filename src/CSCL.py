@@ -63,9 +63,9 @@ class CSCL:
             E_negative_curriculum[i] = self.cur_sche(curriculums, curr_level)
 
         # Masks (positions with the value of True will be ignored in encoder)
-        mask = Ei[:, :, 0] == 0
-        mask_positive = E_positive_curriculum[:, :, 0] == 0
-        mask_negative = E_negative_curriculum[:, :, 0] == 0
+        mask = (Ei[:, :, 0] == 0).float()
+        mask_positive = (E_positive_curriculum[:, :, 0] == 0).float()
+        mask_negative = (E_negative_curriculum[:, :, 0] == 0).float()
 
         return Ei, E_positive_curriculum, E_negative_curriculum, mask, mask_positive, mask_negative
 
