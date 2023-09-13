@@ -52,18 +52,23 @@ def train_CSCL(
                         )
 
                     with torch.set_grad_enabled(phase == 'train'):
+                        mask_triplet = torch.vstack((mask, mask_pos, mask_neg)).to(device)
                         out = model(
                             torch.vstack((E, E_pos, E_neg)).to(device),
-                            torch.vstack((mask, mask_pos, mask_neg)).to(device),
+                            mask_triplet
                             )
-                        out = torch.mean(out, dim=1)
+                        # out = torch.mean(out, dim=1)
+                        # invert mask and average pre-encoder outputs
+                        mask_triplet = abs(mask_triplet-1).unsqueeze(-1)
+                        out = (out * mask_triplet).sum(1) / mask_triplet.sum(1)
+
                         h = out[:E.size(0), :]
                         h_pos = out[E.size(0):2*E.size(0), :]
                         h_neg = out[2*E.size(0):, :]
                         # h = torch.mean(out, dim=1)
                         # h = h.view(-1, 3, h.shape[-1])
 
-                        T = 100
+                        T = 1
                         num = torch.exp(F.cosine_similarity(h, h_pos, dim=1)/T)
                         denom = torch.empty_like(num, device=num.device)
                         for j in range(E.size(0)):
@@ -120,7 +125,7 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 8,
+        'batch_size': 16,
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
@@ -128,7 +133,7 @@ def main():
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
         'T': 5e-6,
-        'lr_pre': 1e-5,
+        'lr_pre': 5e-5,
         'epochs_pre': 5,
         'lr': 2e-5,
         'epochs': 1
