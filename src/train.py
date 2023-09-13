@@ -63,33 +63,30 @@ def train_CSCL(
                         # h = torch.mean(out, dim=1)
                         # h = h.view(-1, 3, h.shape[-1])
 
-                        temp = 1
-
-                        num = torch.exp(F.cosine_similarity(h, h_pos, dim=1)/temp)
-
+                        T = 100
+                        num = torch.exp(F.cosine_similarity(h, h_pos, dim=1)/T)
                         denom = torch.empty_like(num, device=num.device)
                         for j in range(E.size(0)):
                             denomjj = 0
                             for jj in range(E.size(0)):
-                                denomjj += torch.exp(F.cosine_similarity(h[j, :], h_pos[jj, :], dim=0) / temp)
-                                denomjj += torch.exp(F.cosine_similarity(h[j, :], h_neg[jj, :], dim=0) / temp)
+                                denomjj += torch.exp(F.cosine_similarity(h[j, :], h_pos[jj, :], dim=0)/T)
+                                denomjj += torch.exp(F.cosine_similarity(h[j, :], h_neg[jj, :], dim=0)/T)
                             denom[j] = denomjj
 
                         # num = torch.exp(
-                        #     F.cosine_similarity(h[:, 0, :], h[:, 1, :], dim=1) / temp
+                        #     F.cosine_similarity(h[:, 0, :], h[:, 1, :], dim=1) / T
                         #     )
-
                         # denom = torch.empty_like(num, device=num.device)
                         # for j in range(E.size(0)):
                         #     denomjj = 0
                         #     for jj in range(E.size(0)):
-                        #         denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 1, :], dim=0) / temp)
-                        #         denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 2, :], dim=0) / temp)
+                        #         denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 1, :], dim=0) / T)
+                        #         denomjj += torch.exp(F.cosine_similarity(h[j, 0, :], h[jj, 2, :], dim=0) / T)
                         #     denom[j] = denomjj
 
                         loss = -torch.log(num / denom).mean()
-                        # print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
-                        print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
+                        print(f'{epoch}.{batch} {phase} Loss: {loss:.4f}')
+                        # print(f'{epoch}.{batch} {phase} Loss: {loss:.4e}')
 
                         if phase == 'train':
                             optimizer.zero_grad(set_to_none=True)
@@ -99,8 +96,8 @@ def train_CSCL(
                     running_loss += loss.item()
 
                 epoch_loss = running_loss / len(loader)
-                # print(f'{phase} Loss: {epoch_loss:.4f}')
-                print(f'{phase} Loss: {epoch_loss:.4e}')
+                print(f'{phase} Loss: {epoch_loss:.4f}')
+                # print(f'{phase} Loss: {epoch_loss:.4e}')
 
                 if phase == 'dev' and epoch_loss < best_loss:
                     best_loss = epoch_loss
@@ -130,8 +127,8 @@ def main():
         'nhead': 8,
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
-        'temp': 1e-6,
-        'lr_pre': 1e-6,
+        'T': 5e-6,
+        'lr_pre': 1e-5,
         'epochs_pre': 5,
         'lr': 2e-5,
         'epochs': 1
@@ -200,7 +197,7 @@ def main():
 
     cscl = {'train': cscl_train, 'dev': cscl_dev}
 
-    loss_fn = cfg['temp']  # TODO
+    loss_fn = cfg['T']  # TODO
     optimizer = optim.Adam(params=model.parameters(), lr=cfg['lr_pre'])
 
     model = train_CSCL(
