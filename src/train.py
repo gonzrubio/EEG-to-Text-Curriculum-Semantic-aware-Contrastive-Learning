@@ -6,7 +6,9 @@ import pickle
 import time
 
 import torch
+import torch.nn.functional as F
 import torch.optim as optim
+import wandb
 from torch.utils.data import DataLoader
 from transformers import BartTokenizer, BartForConditionalGeneration
 
@@ -15,7 +17,6 @@ from dataset import ZuCo, build_CSCL_maps
 from model import BrainTranslatorPreEncoder, BrainTranslator
 from utils.set_seed import set_seed
 
-import torch.nn.functional as F
 
 def train_BrainTranslator(
         model, dataloaders, loss_fn, optimizer, epochs, device
@@ -24,7 +25,7 @@ def train_BrainTranslator(
 
 
 def train_CSCL(
-        model, dataloaders, cscl, loss_fn, optimizer, epochs, device
+        model, dataloaders, cscl, loss_fn, optimizer, epochs, device, wnb
         ):
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
@@ -36,11 +37,11 @@ def train_CSCL(
             print(f'Epoch {epoch}/{epochs - 1}')
             print('-' * 10)
 
-            for phase in ['train', 'dev']:
+            for phase in ['dev', 'train']:
                 if phase == 'train':
                     model.train()
-                else:
-                    model.eval()
+                # else:
+                #     model.eval()
 
                 running_loss = 0.0
                 loader = dataloaders[phase]
@@ -98,11 +99,17 @@ def train_CSCL(
                             loss.backward()
                             optimizer.step()
 
-                    running_loss += loss.item()
+                        if wnb:
+                            wandb.log({f"{phase} batch loss": loss.item()})
+
+                        running_loss += loss.item()
 
                 epoch_loss = running_loss / len(loader)
                 print(f'{phase} Loss: {epoch_loss:.4f}')
                 # print(f'{phase} Loss: {epoch_loss:.4e}')
+
+                if wnb:
+                    wandb.log({f"{phase} epoch loss": epoch_loss})
 
                 if phase == 'dev' and epoch_loss < best_loss:
                     best_loss = epoch_loss
@@ -125,7 +132,7 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 16,
+        'batch_size': 32,
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
@@ -133,11 +140,15 @@ def main():
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
         'T': 5e-6,
-        'lr_pre': 5e-5,
+        'lr_pre': 1e-4,
         'epochs_pre': 5,
-        'lr': 2e-5,
-        'epochs': 1
+        'lr': 1e-6,
+        'epochs': 5,
+        'wandb': True
         }
+
+    if cfg['wandb']:
+        wandb.init(project='CSCL', reinit=True, config=cfg)
 
     set_seed(cfg['seed'])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -194,6 +205,9 @@ def main():
         dim_s2s=cfg['dim_s2s']
         ).to(device)
 
+    if cfg['wandb']:
+        wandb.watch(model, log='all')
+
     fs, fp, S = build_CSCL_maps(train_set)
     cscl_train = CSCL(fs, fp, S)
 
@@ -206,7 +220,7 @@ def main():
     optimizer = optim.Adam(params=model.parameters(), lr=cfg['lr_pre'])
 
     model = train_CSCL(
-        model, dataloaders, cscl, loss_fn, optimizer, cfg['epochs_pre'], device
+        model, dataloaders, cscl, loss_fn, optimizer, cfg['epochs_pre'], device, cfg['wandb']
         )
 
     # train BrainTranslator
