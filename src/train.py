@@ -40,8 +40,8 @@ def train_CSCL(
             for phase in ['dev', 'train']:
                 if phase == 'train':
                     model.train()
-                # else:
-                #     model.eval()
+                else:
+                    model.eval()
 
                 running_loss = 0.0
                 loader = dataloaders[phase]
@@ -132,7 +132,7 @@ def main():
         'eeg_type_choice': 'GD',
         'bands_choice': 'ALL',
         'dataset_setting': 'unique_sent',
-        'batch_size': 32,
+        'batch_size': 1,
         'shuffle': False,
         'input_dim': 840,
         'num_layers': 6,
@@ -140,7 +140,7 @@ def main():
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
         'T': 5e-6,
-        'lr_pre': 1e-4,
+        'lr_pre': 1e-6,
         'epochs_pre': 5,
         'lr': 1e-6,
         'epochs': 5,
