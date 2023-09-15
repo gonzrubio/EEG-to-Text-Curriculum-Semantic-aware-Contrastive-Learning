@@ -135,10 +135,11 @@ def main():
         'batch_size': 1,
         'shuffle': False,
         'input_dim': 840,
-        'num_layers': 6,
-        'nhead': 8,
+        'num_layers': 1,  # 6
+        'nhead': 1,  # 8
         'dim_pre_encoder': 2048,
         'dim_s2s': 1024,
+        'dropout': 0,
         'T': 5e-6,
         'lr_pre': 1e-6,
         'epochs_pre': 5,
@@ -202,7 +203,8 @@ def main():
         num_layers=cfg['num_layers'],
         nhead=cfg['nhead'],
         dim_pre_encoder=cfg['dim_pre_encoder'],
-        dim_s2s=cfg['dim_s2s']
+        dim_s2s=cfg['dim_s2s'],
+        dropout=cfg['dropout']
         ).to(device)
 
     if cfg['wandb']:
